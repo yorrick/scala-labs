@@ -14,7 +14,7 @@ class DeviceOutputStream(device: Queue[String]) extends OutputStream {
 }
 
 trait Filtering extends OutputStream {
-  private val stringToFilter = "a"
+  protected val stringToFilter = "a"
   
   abstract override def write(s: String) {
     super.write(s.replaceAll(stringToFilter, ""))
