@@ -29,10 +29,8 @@ public class QuickFindUF {
         qf.union(2,3);
         qf.union(2,7);
         qf.union(4,8);
-        
+
         System.out.println(qf.connected(2, 7));
         System.out.println(qf.connected(2, 8));
     }
-    
-    
 }
