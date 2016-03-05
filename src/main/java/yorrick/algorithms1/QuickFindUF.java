@@ -1,4 +1,4 @@
-package yorrick;
+package yorrick.algorithms1;
 
 public class QuickFindUF {
     private int[] id;

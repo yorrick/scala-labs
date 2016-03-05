@@ -1,9 +1,8 @@
-package yorrick;
+package yorrick.algorithms1;
 
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
+
 import static org.junit.Assert.assertEquals;
 import org.junit.runners.BlockJUnit4ClassRunner;
 
