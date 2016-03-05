@@ -3,10 +3,10 @@ package yorrick.algorithms1
 import org.scalatest.{FlatSpec, Matchers, OptionValues, TryValues}
 
 
-class QuickFindTest extends FlatSpec with Matchers with OptionValues with TryValues {
+class QuickUnionTest extends FlatSpec with Matchers with OptionValues with TryValues {
 
-  "Quick find" should "find linked objects" in {
-    val qf = new QuickFindUFScala(10)
+  "Quick union" should "find linked objects" in {
+    val qf = new QuickUnionUFScala(10)
     qf.union(2, 3)
     qf.union(2, 7)
     qf.union(4, 8)
