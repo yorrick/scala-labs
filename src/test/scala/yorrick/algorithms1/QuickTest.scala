@@ -2,6 +2,9 @@ package yorrick.algorithms1
 
 import org.scalatest.{FlatSpec, Matchers}
 
+import scala.util.Random
+import Math._
+
 
 trait QuickBehaviors { this: FlatSpec with Matchers =>
 
@@ -20,12 +23,27 @@ trait QuickBehaviors { this: FlatSpec with Matchers =>
     }
   }
   
+  class PositiveIntGenerator private(max: Int, seed: Int = 1) {
+    private val random = new Random(seed)
+    def nextInt: Int = abs(random.nextInt) % max 
+  }
+  
+  object PositiveIntGenerator {
+    def withMax(max: Int): PositiveIntGenerator = new PositiveIntGenerator(max)
+  }
+  
   def fastQuickAlgorithm(newQuick: Int => Quick) {
+    val quickSize = 100000
+    val unionNb = 10000
+    
     it should "be able to make a lot a unions in a short time" taggedAs(Benchmark) in {
-      val quick = newQuick(1000)
+      val quick = newQuick(quickSize)
+      val generator = PositiveIntGenerator.withMax(quickSize)
+      val unionPairs: Seq[(Int, Int)] = Seq.fill(unionNb)((generator.nextInt, generator.nextInt))
       
-      quick.union(2, 3)
-      // TODO set seed a generate a lot of links randomly
+      unionPairs.foreach { case (p, q) =>
+        quick.union(p, q)
+      }
     }
   }
 }
