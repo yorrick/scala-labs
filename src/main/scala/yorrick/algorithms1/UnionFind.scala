@@ -1,6 +1,6 @@
 package yorrick.algorithms1
 
-trait Quick {
+trait UnionFind {
   def size: Int
 
   /**
@@ -9,5 +9,5 @@ trait Quick {
   protected val ids = Array(0 to size - 1: _*)
   
   def union(p: Int, q: Int)
-  def connected(p: Int, q: Int): Boolean
+  def find(p: Int, q: Int): Boolean
 }
