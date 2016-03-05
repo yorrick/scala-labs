@@ -1,9 +1,7 @@
 package yorrick.algorithms1
 
 
-class QuickFindUFScala(size: Int) {
-  private val ids = Array(0 to size - 1: _*)
-  
+class QuickFindUFScala(override val size: Int) extends Quick{
   def connected(p: Int, q: Int): Boolean = ids(p) == ids(q)
   
   def union(p: Int, q: Int): Unit = {

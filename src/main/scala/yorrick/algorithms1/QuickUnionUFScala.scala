@@ -1,8 +1,6 @@
 package yorrick.algorithms1
 
-class QuickUnionUFScala(size: Int) {
-  private val ids = (0 to size - 1).toArray
-  
+class QuickUnionUFScala(override val size: Int) extends Quick{
   private def root(i: Int): Int = {
     var element = i
     while (element != ids(element)) {
