@@ -1,6 +1,7 @@
-Scala lab
----------
+Scala labs
+----------
 
+Experimentation about simple algorithms implementations and design patterns in scala.
 
 
 ## Tests
