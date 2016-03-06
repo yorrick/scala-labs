@@ -15,6 +15,8 @@ class DecoratorTest extends FlatSpec with Matchers with OptionValues with TryVal
   
   "filter decorator" should "filter custom string" in {
     val device = new Queue[String]
+    
+    // giving parameters to decorator is not as clear as in python
     val os = new DeviceOutputStream(device) with Filtering {
       override val stringToFilter = "b"
     }
