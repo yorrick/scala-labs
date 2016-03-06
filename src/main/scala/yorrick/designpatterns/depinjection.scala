@@ -4,11 +4,11 @@ object DepInjection {
   case class User(name: String)
   
   trait Repository {
-    def save(user: User)
+    protected def save(user: User)
   }
   
   trait MessagingService {
-    def sendMessage(message: String)
+    protected def sendMessage(message: String)
   }
 
   trait DatabaseRepository extends Repository {
