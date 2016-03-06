@@ -2,31 +2,44 @@ package yorrick.designpatterns
 
 object DepInjection {
   case class User(name: String)
-  
-  trait Repository {
-    protected def save(user: User)
-  }
-  
-  trait MessagingService {
-    protected def sendMessage(message: String)
-  }
 
-  trait DatabaseRepository extends Repository {
-    protected def save(user: User) {
-      println(s"Saving: $user")
+  trait RepositoryComponent {
+    val repository: Repository
+    
+    trait Repository {
+      def save(user: User): Boolean
+    }
+  }
+  
+  trait MessagingServiceComponent {
+    val messagingService: MessagingService
+    
+    trait MessagingService {
+      def sendMessage(message: String)
     }
   }
 
-  trait SimpleMessageService extends MessagingService {
-    protected def sendMessage(message: String) {
-      println(s"Message: $message")
+  trait DefaultRepositoryComponent extends RepositoryComponent {
+    class DatabaseRepository extends Repository {
+      def save(user: User): Boolean = if (user.name == "toto") false else true
+    }
+  }
+  
+  trait DefaultMessagingServiceComponent extends MessagingServiceComponent {
+    class SimpleMessageService extends MessagingService {
+      def sendMessage(message: String) {
+        println(s"Message: $message")
+      }
     }
   }
 
-  trait UserService { self: Repository with MessagingService => // requires Repository
-    def create(user: User) {
-      save(user)
-      sendMessage(s"Created user $user")
+  // service declaring two dependencies that it wants injected
+  trait UserService { this: MessagingServiceComponent with DefaultRepositoryComponent =>
+
+    def create(user: User): Boolean = {
+      val saveResult = repository.save(user)
+      messagingService.sendMessage(s"Created user $user")
+      saveResult
     }
   }
 }

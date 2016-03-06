@@ -7,7 +7,14 @@ import DepInjection._
 class DepInjectionTest extends FlatSpec with Matchers with OptionValues with TryValues {
 
   "depedency injection" should "be able to inject dependencies at compile time" in {
-    val userService = new UserService with DatabaseRepository with SimpleMessageService
-    userService.create(User("toto"))
+    object DefaultUserService 
+      extends DefaultRepositoryComponent 
+      with DefaultMessagingServiceComponent 
+      with UserService {
+        val repository = new DatabaseRepository
+        val messagingService = new SimpleMessageService
+      }
+
+    DefaultUserService.create(User("toto"))
   }
 }
