@@ -1,5 +1,9 @@
 package yorrick.designpatterns
 
+
+/**
+ * Dependency injection (case of IoC) implemented using cake pattern
+ */
 object DepInjection {
   case class User(name: String)
 
