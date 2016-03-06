@@ -12,13 +12,13 @@ object DepInjection {
   }
 
   trait DatabaseRepository extends Repository {
-    def save(user: User) {
+    protected def save(user: User) {
       println(s"Saving: $user")
     }
   }
 
   trait SimpleMessageService extends MessagingService {
-    def sendMessage(message: String) {
+    protected def sendMessage(message: String) {
       println(s"Message: $message")
     }
   }
