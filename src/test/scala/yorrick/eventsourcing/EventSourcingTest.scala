@@ -28,7 +28,7 @@ class EventSourcingTest extends FlatSpec with Matchers with OptionValues with Tr
       (Some(ArticleUpdated(Set(Update("title", "Some title", "Some updated title")))), Some(article.copy(title = "Some updated title"))),
       (Some(ArticleUpdated(Set(Update("pdfUrl.checked", false, true)))), Some(Article(1,"Some updated title",PdfUrl("http://toto.com/tata.pdf",true)))),
       (Some(ArticleUpdated(Set(Update("pdfUrl", PdfUrl("http://toto.com/tata.pdf", true), PdfUrl("http://toto.com/titi.pdf", false))))), Some(Article(1,"Some updated title",PdfUrl("http://toto.com/titi.pdf",false)))),
-      (None, None)
+      (None, Some(Article(1,"Some updated title",PdfUrl("http://toto.com/titi.pdf",false))))
     )
   }
 }

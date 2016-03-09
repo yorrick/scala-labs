@@ -22,12 +22,13 @@ object EventSourcing {
     val domainObject = handler.getDomainObject(command)
     val eventOpt = handler.diff(command, domainObject)
 
-    val newDomainObject = eventOpt.map { event =>
-      handler.applyEvent(domainObject, event)
+    val resultingDomainObject: Option[A] = eventOpt match {
+      case Some(event) => Some(handler.applyEvent(domainObject, event))
+      case None => domainObject
     }
 
-    newDomainObject.foreach(handler.saveDomainObject)
+    resultingDomainObject.foreach(handler.saveDomainObject)
 
-    (eventOpt, newDomainObject)
+    (eventOpt, resultingDomainObject)
   }
 }
