@@ -10,8 +10,8 @@ case class PdfUrl(url: String, checked: Boolean)
 case class SaveArticle(article: Article) extends Command
 case class CheckPdfUrl(articleId: Long, pdfUrl: String) extends Command
 
-case class ArticleCreated(article: Article) extends Event
-case class ArticleUpdated(fields: Set[Update[_]]) extends Event
+case class ArticleCreated(article: Article, command: Command) extends Event
+case class ArticleUpdated(fields: Set[Update[_]], command: Command) extends Event
 
 
 trait DiffCalculator[-C <: Command, -A <: Aggregation] {
@@ -20,21 +20,21 @@ trait DiffCalculator[-C <: Command, -A <: Aggregation] {
 
 
 private object SaveArticleDiffCalculator extends DiffCalculator[SaveArticle, Article] {
-  def diff(save: SaveArticle, articleOpt: Option[Article]): Option[Event] = articleOpt match {
+  def diff(command: SaveArticle, articleOpt: Option[Article]): Option[Event] = articleOpt match {
     case Some(article) => {
-      assume(save.article.id == article.id)
+      assume(command.article.id == article.id)
 
       val updatedFields: Set[Update[_]] = Set(
-        Update.fromValues("pdfUrl", article.pdfUrl, save.article.pdfUrl),
-        Update.fromValues("title", article.title, save.article.title)
+        Update.fromValues("pdfUrl", article.pdfUrl, command.article.pdfUrl),
+        Update.fromValues("title", article.title, command.article.title)
       ).collect {
         case Some(u) => u
       }
 
-      if (updatedFields.isEmpty) None else Some(ArticleUpdated(updatedFields))
+      if (updatedFields.isEmpty) None else Some(ArticleUpdated(updatedFields, command))
     }
 
-    case None => Some(ArticleCreated(save.article))
+    case None => Some(ArticleCreated(command.article, command))
   }
 }
 
@@ -50,7 +50,7 @@ private object CheckPdfUrlDiffCalculator extends DiffCalculator[CheckPdfUrl, Art
         case Some(u) => u
       }
 
-      if (updatedFields.isEmpty) None else Some(ArticleUpdated(updatedFields))
+      if (updatedFields.isEmpty) None else Some(ArticleUpdated(updatedFields, command))
     }
 
     case None => throw new Exception("This should not happen")
@@ -80,7 +80,7 @@ object ArticleEventSourcing {
      */
     def applyEvent(articleOpt: Option[Article], event: Event): Article = {
       val newArticle = event match {
-        case ArticleUpdated(updates) => {
+        case ArticleUpdated(updates, _) => {
           updates.foldLeft(articleOpt.get) { case (currentArticle: Article, update) =>
             update match {
               case Update("title", _, newValue: String) => currentArticle.copy(title = newValue)
@@ -91,7 +91,7 @@ object ArticleEventSourcing {
           }
 
         }
-        case ArticleCreated(a) => a
+        case ArticleCreated(a, _) => a
       }
 
       newArticle

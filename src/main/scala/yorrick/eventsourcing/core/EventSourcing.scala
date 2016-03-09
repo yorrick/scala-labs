@@ -4,8 +4,11 @@ object EventSourcing {
   abstract class Aggregation
   abstract class Command
   // TODO make event reversible, with a null element
-  // TODO store command in event
-  abstract class Event
+
+  abstract class Event {
+    /** Command that created the event **/
+    val command: Command
+  }
 
   trait Handler[A <: Aggregation] {
     def diff(command: Command, state: Option[A]): Option[Event]
