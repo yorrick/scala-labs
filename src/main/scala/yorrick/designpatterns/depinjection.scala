@@ -15,6 +15,12 @@ object DepInjection {
     }
   }
   
+  trait DefaultRepositoryComponent extends RepositoryComponent {
+    class DatabaseRepository extends Repository {
+      def save(user: User): Boolean = if (user.name == "toto") false else true
+    }
+  }
+  
   trait MessagingServiceComponent {
     val messagingService: MessagingService
     
@@ -23,12 +29,6 @@ object DepInjection {
     }
   }
 
-  trait DefaultRepositoryComponent extends RepositoryComponent {
-    class DatabaseRepository extends Repository {
-      def save(user: User): Boolean = if (user.name == "toto") false else true
-    }
-  }
-  
   trait DefaultMessagingServiceComponent extends MessagingServiceComponent {
     class SimpleMessageService extends MessagingService {
       def sendMessage(message: String) {
