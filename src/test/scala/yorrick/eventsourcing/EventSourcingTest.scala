@@ -19,14 +19,16 @@ class EventSourcingTest extends FlatSpec with Matchers with OptionValues with Tr
       SaveArticle(article), 
       SaveArticle(article.copy(title = "Some updated title")),
       CheckPdfUrl(1, "http://toto.com/tata.pdf"),
+      SaveArticle(Article(1, "Some updated title", PdfUrl("http://toto.com/titi.pdf", false))),
       SaveArticle(Article(1, "Some updated title", PdfUrl("http://toto.com/titi.pdf", false)))
     )
-    
-    commands.map(c => process(c)).collect { case Some(v) => v } shouldBe Seq(
-      ArticleCreated(article),
-      ArticleUpdated(Set(Update("title", "Some title", "Some updated title"))),
-      ArticleUpdated(Set(Update("pdfUrl.checked", false, true))),
-      ArticleUpdated(Set(Update("pdfUrl", PdfUrl("http://toto.com/tata.pdf", true), PdfUrl("http://toto.com/titi.pdf", false))))
+
+    commands.map(c => process(c)) shouldBe Seq(
+      (Some(ArticleCreated(article)), Some(article)),
+      (Some(ArticleUpdated(Set(Update("title", "Some title", "Some updated title")))), Some(article.copy(title = "Some updated title"))),
+      (Some(ArticleUpdated(Set(Update("pdfUrl.checked", false, true)))), Some(Article(1,"Some updated title",PdfUrl("http://toto.com/tata.pdf",true)))),
+      (Some(ArticleUpdated(Set(Update("pdfUrl", PdfUrl("http://toto.com/tata.pdf", true), PdfUrl("http://toto.com/titi.pdf", false))))), Some(Article(1,"Some updated title",PdfUrl("http://toto.com/titi.pdf",false)))),
+      (None, None)
     )
   }
 }

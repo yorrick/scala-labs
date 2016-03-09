@@ -3,6 +3,7 @@ package yorrick.eventsourcing.core
 object EventSourcing {
   abstract class Aggregation
   abstract class Command
+  // TODO make event reversible, with a null element
   abstract class Event
 
   trait DiffCalculator[-C <: Command, -A <: Aggregation] {
@@ -16,7 +17,8 @@ object EventSourcing {
     def saveDomainObject(domainObject: A): A
   }
 
-  def process[C <: Command, A <: Aggregation](command: C)(implicit handler: Handler[A]): Option[Event] = {
+//  TODO remove side effects
+  def process[C <: Command, A <: Aggregation](command: C)(implicit handler: Handler[A]): (Option[Event], Option[A]) = {
     val domainObject = handler.getDomainObject(command)
     val eventOpt = handler.diff(command, domainObject)
 
@@ -26,6 +28,6 @@ object EventSourcing {
 
     newDomainObject.foreach(handler.saveDomainObject)
 
-    eventOpt
+    (eventOpt, newDomainObject)
   }
 }
