@@ -1,8 +1,7 @@
 package yorrick.eventsourcing.aggregation
 
 import yorrick.eventsourcing.core.EventSourcing._
-import yorrick.eventsourcing.core.{EventSourcing, Update}
-import yorrick.eventsourcing.repository.ArticleRepositoryComponent
+import yorrick.eventsourcing.core.Update
 
 
 case class Article(id: Long, title: String, pdfUrl: PdfUrl) extends Aggregation
@@ -59,56 +58,43 @@ private object CheckPdfUrlDiffCalculator extends DiffCalculator[CheckPdfUrl, Art
 }
 
 
-trait ArticleHandler extends Handler[Article] { this: ArticleRepositoryComponent =>
-  /**
-   * Generates events from a command and an article
-   * @param command
-   * @param articleOpt
-   * @return
-   */
-  def diff(command: Command, articleOpt: Option[Article]): Option[Event] = command match {
-    case c: SaveArticle => SaveArticleDiffCalculator.diff(c, articleOpt)
-    case c: CheckPdfUrl => CheckPdfUrlDiffCalculator.diff(c, articleOpt)
-  }
+object ArticleEventSourcing {
 
-  def getDomainObject(command: Command): Option[Article] = {
-    val articleId = command match {
-      case c: SaveArticle => c.article.id
-      case c: CheckPdfUrl => c.articleId
+  implicit object ArticleHandler extends Handler[Article] {
+    /**
+     * Generates events from a command and an article
+     * @param command
+     * @param articleOpt
+     * @return
+     */
+    def diff(command: Command, articleOpt: Option[Article]): Option[Event] = command match {
+      case c: SaveArticle => SaveArticleDiffCalculator.diff(c, articleOpt)
+      case c: CheckPdfUrl => CheckPdfUrlDiffCalculator.diff(c, articleOpt)
     }
-    
-    articleRepository.get(articleId)
-  }
 
-  /**
-   * Proxy method to save object
-   * @param article
-   * @return
-   */
-  def saveDomainObject(article: Article): Article = articleRepository.save(article)
-
-  /**
-   * Creates new state of object using event
-   * @param articleOpt
-   * @param event
-   * @return
-   */
-  def applyEvent(articleOpt: Option[Article], event: Event): Article = {
-    val newArticle = event match {
-      case ArticleUpdated(updates) => {
-        updates.foldLeft(articleOpt.get){ case (currentArticle: Article, update) =>
-          update match {
-            case Update("title", _, newValue: String) => currentArticle.copy(title = newValue)
-            case Update("pdfUrl", _, newValue: PdfUrl) => currentArticle.copy(pdfUrl = newValue)
-            case Update("pdfUrl.checked", _, newValue: Boolean) => 
-              currentArticle.copy(pdfUrl = currentArticle.pdfUrl.copy(checked = newValue))
+    /**
+     * Creates new state of object using event
+     * @param articleOpt
+     * @param event
+     * @return
+     */
+    def applyEvent(articleOpt: Option[Article], event: Event): Article = {
+      val newArticle = event match {
+        case ArticleUpdated(updates) => {
+          updates.foldLeft(articleOpt.get) { case (currentArticle: Article, update) =>
+            update match {
+              case Update("title", _, newValue: String) => currentArticle.copy(title = newValue)
+              case Update("pdfUrl", _, newValue: PdfUrl) => currentArticle.copy(pdfUrl = newValue)
+              case Update("pdfUrl.checked", _, newValue: Boolean) =>
+                currentArticle.copy(pdfUrl = currentArticle.pdfUrl.copy(checked = newValue))
+            }
           }
-        }
-        
-      }
-      case ArticleCreated(a) => a
-    }
 
-    newArticle
+        }
+        case ArticleCreated(a) => a
+      }
+
+      newArticle
+    }
   }
 }

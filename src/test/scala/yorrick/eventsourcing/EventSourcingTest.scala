@@ -2,18 +2,14 @@ package yorrick.eventsourcing
 
 import org.scalatest.{FlatSpec, Matchers, OptionValues, TryValues}
 import yorrick.eventsourcing.aggregation._
-import yorrick.eventsourcing.core.{Update, EventSourcing}
+import yorrick.eventsourcing.core.{EventSourcing, Update}
+import ArticleEventSourcing._
 import EventSourcing._
-import yorrick.eventsourcing.repository.InMemoryArticleRepositoryComponent
 
 
 class EventSourcingTest extends FlatSpec with Matchers with OptionValues with TryValues {
 
   "A sequence a valid commands" should "generate a sequence of events" in {
-    implicit object Context extends ArticleHandler with InMemoryArticleRepositoryComponent {
-      val articleRepository = new InMemoryArticleRepository
-    }
-    
     val article = Article(1, "Some title", PdfUrl("http://toto.com/tata.pdf", false))
     val commands = Seq(
       SaveArticle(article), 
