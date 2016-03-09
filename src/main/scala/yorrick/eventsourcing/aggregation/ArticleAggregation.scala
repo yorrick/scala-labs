@@ -15,6 +15,11 @@ case class ArticleCreated(article: Article) extends Event
 case class ArticleUpdated(fields: Set[Update[_]]) extends Event
 
 
+trait DiffCalculator[-C <: Command, -A <: Aggregation] {
+  def diff(command: C, existingObject: Option[A]): Option[Event]
+}
+
+
 private object SaveArticleDiffCalculator extends DiffCalculator[SaveArticle, Article] {
   def diff(save: SaveArticle, articleOpt: Option[Article]): Option[Event] = articleOpt match {
     case Some(article) => {

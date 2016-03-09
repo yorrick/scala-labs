@@ -4,22 +4,15 @@ object EventSourcing {
   abstract class Aggregation
   abstract class Command
   // TODO make event reversible, with a null element
+  // TODO store command in event
   abstract class Event
 
-  trait DiffCalculator[-C <: Command, -A <: Aggregation] {
-    def diff(command: C, existingObject: Option[A]): Option[Event]
-  }
-  
   trait Handler[A <: Aggregation] {
     def diff(command: Command, state: Option[A]): Option[Event]
     def applyEvent(domainObject: Option[A], event: Event): A
-    def getDomainObject(command: Command): Option[A]
-    def saveDomainObject(domainObject: A): A
   }
 
-//  TODO remove side effects
-  def process[C <: Command, A <: Aggregation](command: C)(implicit handler: Handler[A]): (Option[Event], Option[A]) = {
-    val domainObject = handler.getDomainObject(command)
+  private def processSingle[C <: Command, A <: Aggregation](domainObject: Option[A], command: C)(implicit handler: Handler[A]): (Option[A], Option[Event]) = {
     val eventOpt = handler.diff(command, domainObject)
 
     val resultingDomainObject: Option[A] = eventOpt match {
@@ -27,8 +20,24 @@ object EventSourcing {
       case None => domainObject
     }
 
-    resultingDomainObject.foreach(handler.saveDomainObject)
+    (resultingDomainObject, eventOpt)
+  }
 
-    (eventOpt, resultingDomainObject)
+  /**
+   * Processes N commands, starting from domain object
+   * @param domainObject
+   * @param commands
+   * @param handler
+   * @tparam C
+   * @tparam A
+   * @return
+   */
+  def process[C <: Command, A <: Aggregation](domainObject: Option[A], commands: C*)(implicit handler: Handler[A]): Seq[(Option[A], Option[Event])] = {
+    if (commands.isEmpty) {
+      Seq.empty
+    } else {
+      val (obj, event) = processSingle(domainObject, commands.head)
+      Seq((obj, event)) ++ process(obj, commands.tail: _*)
+    }
   }
 }
