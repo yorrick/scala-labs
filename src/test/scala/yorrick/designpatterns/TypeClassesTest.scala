@@ -20,6 +20,6 @@ class TypeClassesTest extends FlatSpec with Matchers with OptionValues with TryV
     }
 
     val numbers = Vector[Int](1, 3, 5, 8, 4)
-    mean(numbers) shouldBe 4  // value stay an integer (by API design)
+    mean(numbers) shouldBe 4  // value stays an integer (by API design)
   }
 }

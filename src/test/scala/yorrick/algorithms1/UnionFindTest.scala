@@ -49,7 +49,7 @@ trait UnionFindBehaviors { this: FlatSpec with Matchers =>
   
   def fastFindAlgorithm(newQuick: Int => UnionFind) {
     it should "be able to make a lot a finds in a short time" taggedAs(Benchmark) in {
-      val quick = newQuick(100000)
+      val quick = newQuick(1000000)
       
       PositiveIntGenerator.pairSequence(10000, quick.size).foreach { 
         case (p, q) => quick.union(p, q) 
@@ -74,4 +74,8 @@ class UnionFindTest extends FlatSpec with Matchers with UnionFindBehaviors {
   "A WeightedQuickUnionUFScala" should behave like findConnectedItems(new WeightedTreeUnionFindScala(_))
   "A WeightedQuickUnionUFScala" should behave like fastUnionAlgorithm(new WeightedTreeUnionFindScala(_))
   "A WeightedQuickUnionUFScala" should behave like fastFindAlgorithm(new WeightedTreeUnionFindScala(_))
+  
+  "A WeightedCompressedTreeUnionFindScala" should behave like findConnectedItems(new WeightedCompressedTreeUnionFindScala(_))
+  "A WeightedCompressedTreeUnionFindScala" should behave like fastUnionAlgorithm(new WeightedCompressedTreeUnionFindScala(_))
+  "A WeightedCompressedTreeUnionFindScala" should behave like fastFindAlgorithm(new WeightedCompressedTreeUnionFindScala(_))
 }
