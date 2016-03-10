@@ -31,7 +31,10 @@ class EventSourcingTest extends FlatSpec with Matchers with OptionValues with Tr
   
   "Applying event and their inverse" should "make domain objects return to their original state" in {
     val article = Article(1, "Some title", PdfUrl("http://toto.com/tata.pdf", false))
-    val event = ArticleUpdated(Set(Update.fromValues("title", "Some title", "Some updated title").get), EmptyCommand)
-    processEvents(Some(article), event, event.inverse).value shouldBe article
+    val createEvent = ArticleCreated(article)
+    val updateEvent = ArticleUpdated(Set(Update.fromValues("title", "Some title", "Some updated title").get))
+    
+    processEvents(Some(article), updateEvent, updateEvent.inverse).value shouldBe article
+    processEvents(None, createEvent, updateEvent, updateEvent.inverse, createEvent.inverse) shouldBe None
   }
 }

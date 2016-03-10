@@ -11,15 +11,15 @@ case class SaveArticle(article: Article) extends Command
 case class CheckPdfUrl(articleId: Long, pdfUrl: String) extends Command
 
 
-case class ArticleCreated(article: Article, command: Command) extends Event {
+case class ArticleCreated(article: Article, command: Command = EmptyCommand) extends Event {
   override def inverse: Event = ArticleDeleted(article, command.inverse)
 }
 
-case class ArticleDeleted(article: Article, command: Command) extends Event {
+case class ArticleDeleted(article: Article, command: Command = EmptyCommand) extends Event {
   override def inverse: Event = ArticleCreated(article, command.inverse)
 }
 
-case class ArticleUpdated(fields: Set[Update[_]], command: Command) extends Event {
+case class ArticleUpdated(fields: Set[Update[_]], command: Command = EmptyCommand) extends Event {
   def inverse: ArticleUpdated = ArticleUpdated(fields.map(_.inverse), command.inverse)
 }
 
