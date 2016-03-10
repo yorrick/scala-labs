@@ -37,4 +37,12 @@ class EventSourcingTest extends FlatSpec with Matchers with OptionValues with Tr
     processEvents(Some(article), updateEvent, updateEvent.inverse).value shouldBe article
     processEvents(None, createEvent, updateEvent, updateEvent.inverse, createEvent.inverse) shouldBe None
   }
+  
+  "Applying some events on non existing state" should "result in failure" in {
+    val updateEvent = ArticleUpdated(Set(Update.fromValues("title", "Some title", "Some updated title").get))
+    
+    intercept[java.lang.AssertionError] {
+      processEvents(None, updateEvent)
+    }
+  }
 }

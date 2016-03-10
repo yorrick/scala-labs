@@ -91,6 +91,8 @@ object ArticleEventSourcing {
     def applyEvent(articleOpt: Option[Article], event: Event): Option[Article] = {
       val newArticle: Option[Article] = event match {
         case ArticleUpdated(updates, _) => {
+          assume(articleOpt.isDefined, "Cannot update a non existing domain object")
+          
           val a = updates.foldLeft(articleOpt.get) { case (currentArticle: Article, update) =>
             update match {
               case Update("title", _, newValue: String) => currentArticle.copy(title = newValue)
