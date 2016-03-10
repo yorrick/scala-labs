@@ -20,12 +20,18 @@ class EventSourcingTest extends FlatSpec with Matchers with OptionValues with Tr
 
     val commands = Seq(cmd1, cmd2, cmd3, cmd4, cmd5)
 
-    process(None, commands: _*) shouldBe Seq(
+    processCommands(None, commands: _*) shouldBe Seq(
       (Some(article), Some(ArticleCreated(article, cmd1))),
       (Some(article.copy(title = "Some updated title")), Some(ArticleUpdated(Set(Update("title", "Some title", "Some updated title")), cmd2))),
       (Some(Article(1,"Some updated title",PdfUrl("http://toto.com/tata.pdf",true))), Some(ArticleUpdated(Set(Update("pdfUrl.checked", false, true)), cmd3))),
       (Some(Article(1,"Some updated title",PdfUrl("http://toto.com/titi.pdf",false))), Some(ArticleUpdated(Set(Update("pdfUrl", PdfUrl("http://toto.com/tata.pdf", true), PdfUrl("http://toto.com/titi.pdf", false))), cmd4))),
       (Some(Article(1,"Some updated title",PdfUrl("http://toto.com/titi.pdf",false))), None)
     )
+  }  
+  
+  "Applying event and their inverse" should "make domain objects return to their original state" in {
+    val article = Article(1, "Some title", PdfUrl("http://toto.com/tata.pdf", false))
+    val event = ArticleUpdated(Set(Update.fromValues("title", "Some title", "Some updated title").get), EmptyCommand)
+    processEvents(Some(article), event, event.inverse).value shouldBe article
   }
 }

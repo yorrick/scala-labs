@@ -10,8 +10,18 @@ case class PdfUrl(url: String, checked: Boolean)
 case class SaveArticle(article: Article) extends Command
 case class CheckPdfUrl(articleId: Long, pdfUrl: String) extends Command
 
-case class ArticleCreated(article: Article, command: Command) extends Event
-case class ArticleUpdated(fields: Set[Update[_]], command: Command) extends Event
+
+case class ArticleCreated(article: Article, command: Command) extends Event {
+  override def inverse: Event = ArticleDeleted(article, command.inverse)
+}
+
+case class ArticleDeleted(article: Article, command: Command) extends Event {
+  override def inverse: Event = ArticleCreated(article, command.inverse)
+}
+
+case class ArticleUpdated(fields: Set[Update[_]], command: Command) extends Event {
+  def inverse: ArticleUpdated = ArticleUpdated(fields.map(_.inverse), command.inverse)
+}
 
 
 trait DiffCalculator[-C <: Command, -A <: Aggregation] {
@@ -78,10 +88,10 @@ object ArticleEventSourcing {
      * @param event
      * @return
      */
-    def applyEvent(articleOpt: Option[Article], event: Event): Article = {
-      val newArticle = event match {
+    def applyEvent(articleOpt: Option[Article], event: Event): Option[Article] = {
+      val newArticle: Option[Article] = event match {
         case ArticleUpdated(updates, _) => {
-          updates.foldLeft(articleOpt.get) { case (currentArticle: Article, update) =>
+          val a = updates.foldLeft(articleOpt.get) { case (currentArticle: Article, update) =>
             update match {
               case Update("title", _, newValue: String) => currentArticle.copy(title = newValue)
               case Update("pdfUrl", _, newValue: PdfUrl) => currentArticle.copy(pdfUrl = newValue)
@@ -90,8 +100,10 @@ object ArticleEventSourcing {
             }
           }
 
+          Some(a)
         }
-        case ArticleCreated(a, _) => a
+        case ArticleCreated(a, _) => Some(a)
+        case ArticleDeleted(a, _) => None
       }
 
       newArticle

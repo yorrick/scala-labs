@@ -1,7 +1,9 @@
 package yorrick.eventsourcing.core
 
 
-case class Update[V](fieldName: String, oldValue: V, newValue: V)
+case class Update[V](fieldName: String, oldValue: V, newValue: V) {
+  def inverse: Update[V] = Update(fieldName, newValue, oldValue)
+}
 
 
 object Update {
