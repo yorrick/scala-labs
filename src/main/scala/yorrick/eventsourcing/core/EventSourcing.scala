@@ -1,10 +1,11 @@
 package yorrick.eventsourcing.core
 
+import scala.annotation.tailrec
+
 
 // TODO make backups
 // TODO rebuild state
 // TODO build diffs dynamically using introspection
-// TODO make event reversible, with a null element
 object EventSourcing {
   abstract class Aggregation
 
@@ -40,10 +41,9 @@ object EventSourcing {
 
   /**
    * Processes N commands, starting from domain object
-   * TODO check for tail recursion optimization 
    * @param domainObject
    * @param commands
-   * @param handler
+   * @param handler 
    * @tparam C
    * @tparam A
    * @return
@@ -64,6 +64,7 @@ object EventSourcing {
    * @tparam A
    * @return
    */
+  @tailrec
   def processEvents[A <: Aggregation](domainObject: Option[A], events: Event*)(implicit handler: Handler[A]): Option[A] = events.toList match {
     case Nil => domainObject
     case event :: Nil => handler.applyEvent(domainObject, event)
