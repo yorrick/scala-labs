@@ -1,6 +1,6 @@
 package yorrick.functionalprogramming
 
-object MyModule {
+object Exercice2_2 {
   def abs(n: Int): Int = if (n < 0) -n else n
   
   private def formatAbs(x: Int) = {
