@@ -28,4 +28,5 @@ object Exercice2_5_1 {
     println(formatResult("increment4", 7, _ + 1))
     println(formatResult("increment5", 7, x => { val r = x + 1; r }))
   }
+
 }
