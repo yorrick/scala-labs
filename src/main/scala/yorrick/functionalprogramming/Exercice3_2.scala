@@ -98,7 +98,19 @@ object Exercice3_2 {
   }
 
   def length[A](l: List[A]): Int = foldRight(l, 0)((_, acc) => acc + 1)
+
+  @tailrec
+  def foldLeft[A,B](l: List[A], z: B)(f: (A, B) => B): B = l match {
+    case Nil => z
+    case Cons(h, t) => foldLeft(t, f(h, z))(f)
+  }
+
+  def sum3[A](l: List[Int]): Int = foldLeft(l, 0)(_ + _)
+  def product3[A](l: List[Double]): Double = foldLeft(l, 0.0)(_ * _)
+  def length3[A](l: List[A]): Int = foldLeft(l, 0)((_, acc) => acc + 1)
   
+  def reverse[A](l: List[A]): List[A] = foldLeft(l, Nil: List[A])((a: A, acc: List[A]) => Cons(a, acc))
+
   def main(args: Array[String]): Unit = {
     import List._
     
@@ -119,5 +131,17 @@ object Exercice3_2 {
     val result: List[Int] = foldRight(List(1,2,3), Nil: List[Int])(Cons(_,_))
     
     println(s"length(List(1, 2, 3)): ${length(List(1, 2, 3))}")
+   
+    
+    // stack overflows
+    val ints: Seq[Int] = 1 to 1000
+//    foldRight(List(ints: _*), 0)(_ + _)
+
+    // does not stack overflows
+    println(s"foldLeft(List(ints: _*), 0)(_ + _): ${foldLeft(List(ints: _*), 0)(_ + _)}")
+    println(s"foldLeft(List(1, 2, 3), 0)(_ + _): ${foldLeft(List(1, 2, 3), 0)(_ + _)}")
+    
+    
+    println(s"reverse(List(1, 2, 3)): ${reverse(List(1, 2, 3))}")
   }
 }
