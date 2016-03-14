@@ -47,11 +47,57 @@ object Exercice3_2 {
       case Cons(h, t) if (p(h)) => dropWhile(t)(p)
       case _ => ds
     }
+    
+    def setHead[A](ds: List[A])(h: A): List[A] = ds match {
+      case Nil => List(h)
+      case Cons(_, t) => Cons(h, t)
+    }
+
+    // not tail recursive, and copies list until end
+    def init[A](l: List[A]): List[A] = l match {
+      case Nil => sys.error("...")
+      case Cons(h, Nil) => Nil
+      case Cons(h, t) => Cons(h, init(t))
+    }
 
     def apply[A](as: A*): List[A] =
       if (as.isEmpty) Nil
       else Cons(as.head, apply(as.tail: _*))
   }
+
+  def init2[A](l: List[A]): List[A] = {
+    import collection.mutable.ListBuffer
+    val buf = new ListBuffer[A]
+    
+    @tailrec
+    def go(cur: List[A]): List[A] = cur match {
+      case Nil => sys.error("init of empty list")
+      case Cons(_,Nil) => List(buf.toList: _*)
+      case Cons(h,t) => buf += h; go(t)
+    }
+    go(l)
+  }
+  
+  def foldRight[A, B](l: List[A], z: B)(f: (A, B) => B): B = {
+    println(s"Execution of foldRight, on list $l")
+    
+    l match {
+      case Nil => z
+      case Cons(h, t) => f(h, foldRight(t, z)(f))
+    }
+  }
+  
+  def foldRight2[A, B](l: List[A], z: B, shortCircuit: PartialFunction[A, B] = Map.empty)(f: (A, B) => B): B = {
+    println(s"Execution of foldRight2, on list $l")
+    
+    l match {
+      case Nil => z
+      case Cons(h, t) if shortCircuit.isDefinedAt(h) => shortCircuit(h)
+      case Cons(h, t) => f(h, foldRight2(t, z, shortCircuit)(f))
+    }
+  }
+
+  def length[A](l: List[A]): Int = foldRight(l, 0)((_, acc) => acc + 1)
   
   def main(args: Array[String]): Unit = {
     import List._
@@ -64,5 +110,14 @@ object Exercice3_2 {
     println(s"tail(example2): ${tail(example2)}")
     println(s"drop(example2, 2): ${drop(example2)(2)}")
     println(s"dropWhile(example2, 2): ${dropWhile(example2)(_ < 2)}")
+    println(s"foldRight(example2, 1)(_ * _): ${foldRight(example2, 1)(_ * _)}")
+
+    val mutltiplyShortCircuit: PartialFunction[Int, Int] = { case 0 => 0 }
+    
+    println(s"foldRight2(List(1,0,2,3), 1, mutltiplyShortCircuit)(_ * _): ${foldRight2(List(1,0,2,3), 1, mutltiplyShortCircuit)(_ * _)}")
+
+    val result: List[Int] = foldRight(List(1,2,3), Nil: List[Int])(Cons(_,_))
+    
+    println(s"length(List(1, 2, 3)): ${length(List(1, 2, 3))}")
   }
 }
