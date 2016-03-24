@@ -1,6 +1,10 @@
 package yorrick.functionalprogramming
 
 import yorrick.functionalprogramming.RNG.SimpleRNG
+import Action._
+
+import scala.annotation.tailrec
+
 
 trait RNG {
   def nextInt: (Int, RNG) // Should generate a random `Int`. We'll later define other functions in terms of `nextInt`.
@@ -130,36 +134,123 @@ object RNG {
 }
 
 
-object Test {
-  import State._
+case class Action[S, +A](run: S => (S, A)) {
+  /**
+   * Adds an action to this action. 
+   * flatMap chains this action to another one, using a function that builds another action
+   */
+  def flatMap[B](f: A => Action[S, B]): Action[S, B] = Action(s => {
+    val (newState, a) = run(s)
+    f(a).run(newState)
+  })
 
-  case class State[S, +A](run: S => (A, S)) {
-    def flatMap[B](f: A => State[S, B]): State[S, B] = State(s => {
-      val (a, newState) = run(s)
-      f(a).run(newState)
-    })
+  /**
+   * Adds a function to this action. 
+   * map builds another action by transforming this action's resulting value, but does not touch state (use unit)
+   */
+  def map[B](f: A => B): Action[S, B] = flatMap(a => unit(f(a)))
+
+  /**
+   * Composes 2 actions' results using a function
+   */
+  def map2[B,C](sb: Action[S, B])(f: (A, B) => C): Action[S, C] = flatMap(a => sb.map(b => f(a, b)))
+}
+
+
+object Action {
+  /**
+   * Build an action that has no effect on state
+   */
+  def unit[S, A](a: A): Action[S, A] = Action(s => (s, a))
+
+  /**
+   * Builds an action from a list of actions
+   */
+  def sequence[S, A](sas: List[Action[S, A]]): Action[S, List[A]] = {
+    @tailrec
+    def go(state: S, actions: List[Action[S, A]], valueAcc: List[A]): (S, List[A]) =
+      actions match {
+        case Nil => (state, valueAcc.reverse)
+        case headStateAction :: tail => headStateAction.run(state) match { 
+          case (newState, value) => go(newState, tail, value :: valueAcc)
+        }
+      }
     
-    def map[B](f: A => B): State[S, B] = flatMap(a => unit(f(a)))
-
-    def map2[B,C](sb: State[S, B])(f: (A, B) => C): State[S, C] = flatMap(a => sb.map(b => f(a, b)))
+    Action((s: S) => go(s, sas, List.empty))
   }
 
-  object State {
-    type Rand[A] = State[RNG, A]
-    def unit[S, A](a: A): State[S, A] = State(s => (a, s))
+  /**
+   * get action just passes the state along, and also returns state
+   */
+  def get[S]: Action[S, S] = Action(s => (s, s))
+
+  /**
+   * set action ignores incoming state, and replaces state with the one given. It returns no value (Unit)
+   */
+  def set[S](s: S): Action[S, Unit] = Action(_ => (s, ()))
+  
+  /**
+   * Modify action just read the states, and set it to the value returned by f
+   */
+  def modify[S](f: S => S): Action[S, Unit] = for {
+    s <- get // Gets the current state and assigns it to `s`.
+    _ <- set(f(s)) // Sets the new state to `f` applied to `s`.
+  } yield ()
+}
+
+
+sealed trait Input
+case object Coin extends Input
+case object Turn extends Input
+
+case class Machine(locked: Boolean, candies: Int, coins: Int)
+
+
+object Candy {
+  
+  /**
+   * From an input, builds a state transition (Machine => Machine function)
+   */
+  def update: Input => (Machine => Machine) = (input: Input) => (machine: Machine) => (input, machine) match {
+    case (_, Machine(_, 0, _)) => machine
+    case (Coin, Machine(false, _, _)) => machine
+    case (Turn, Machine(true, _, _)) => machine
+    case (Coin, Machine(true, candy, coin)) => Machine(false, candy, coin + 1)
+    case (Turn, Machine(false, candy, coin)) => Machine(true, candy - 1, coin)
   }
+
+  /**
+   * Builds an action from a list of inputs
+   */
+  def simulateMachine(inputs: List[Input]): Action[Machine, (Int, Int)] = {
+    val updateMachine: Input => Action[Machine, Unit] = update andThen modify[Machine] _
+
+    for {
+      _ <- sequence(inputs.map(updateMachine))
+      s <- get
+    } yield (s.coins, s.candies)
+  }
+}
+
+
+object Test {
   
   def main(args: Array[String]): Unit = {
-    case class Person(name: String)
-    
-    val initialState: State[List[Person], Person] = State.unit(Person("toto"))
-    println(initialState.run(Nil))
-    println(initialState.map(_.name).run(Nil))
+    println(Candy.simulateMachine(List(Turn)).run(Machine(false, 10, 3)))
+    println(Candy.simulateMachine(List(Turn, Coin, Turn, Coin)).run(Machine(false, 0, 3)))
+    println(Candy.simulateMachine(List(Coin, Coin, Turn, Coin)).run(Machine(false, 10, 3)))
 
-    println(initialState.flatMap(p => State(s => (p, p :: s))).run(Nil))
+//    case class Person(name: String)
+//    
+//    val initialState: State[List[Person], Person] = State.unit(Person("toto"))
+//    println(initialState.run(Nil))
+//    println(initialState.map(_.name).run(Nil))
+//
+//    println(initialState.flatMap(p => State(s => (p, p :: s))).run(Nil))
+//
+//    def addPerson(p: Person) = State[List[Person], Person](referential => (p, p :: referential))
+//    println(initialState.flatMap(addPerson).run(Nil))
 
-    def addPerson(p: Person) = State[List[Person], Person](referential => (p, p :: referential))
-    println(initialState.flatMap(addPerson).run(Nil))
 
 //    import RNG._
 //    
