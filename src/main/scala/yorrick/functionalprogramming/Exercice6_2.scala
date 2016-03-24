@@ -2,6 +2,7 @@ package yorrick.functionalprogramming
 
 import yorrick.functionalprogramming.RNG.SimpleRNG
 import Action._
+import Candy._
 
 import scala.annotation.tailrec
 
@@ -134,6 +135,9 @@ object RNG {
 }
 
 
+/**
+ * Action wraps a function that builds (new state, and value) from a given state
+ */
 case class Action[S, +A](run: S => (S, A)) {
   /**
    * Adds an action to this action. 
@@ -211,7 +215,7 @@ object Candy {
   /**
    * From an input, builds a state transition (Machine => Machine function)
    */
-  def update: Input => (Machine => Machine) = (input: Input) => (machine: Machine) => (input, machine) match {
+  def update: Input => (Machine => Machine) = input => machine => (input, machine) match {
     case (_, Machine(_, 0, _)) => machine
     case (Coin, Machine(false, _, _)) => machine
     case (Turn, Machine(true, _, _)) => machine
@@ -223,12 +227,25 @@ object Candy {
    * Builds an action from a list of inputs
    */
   def simulateMachine(inputs: List[Input]): Action[Machine, (Int, Int)] = {
-    val updateMachine: Input => Action[Machine, Unit] = update andThen modify[Machine] _
+    // A => B andThen B => C = A => C
+    // Input => (Machine => Machine) andThen (Machine => Machine) => Action[Machine, Unit] = Input => Action[Machine, Unit]
+    val inputToActions: Input => Action[Machine, Unit] = update andThen modify[Machine] _
+    
+    // builds an action for each input
+    val actions: List[Action[Machine, Unit]] = inputs.map(inputToActions)
+    
+    // builds one action from the list of actions
+    val bigAction = sequence(actions)
 
+    // combines bigAction and get into a new action, that returns only coins and candies
     for {
-      _ <- sequence(inputs.map(updateMachine))
+      _ <- bigAction
       s <- get
-    } yield (s.coins, s.candies)
+    } yield (s.candies, s.coins)
+  }
+  
+  def applyInputs(machine: Machine)(inputs: Input*): (Machine, (Int, Int)) = {
+    simulateMachine(inputs.toList).run(machine)
   }
 }
 
@@ -236,9 +253,11 @@ object Candy {
 object Test {
   
   def main(args: Array[String]): Unit = {
-    println(Candy.simulateMachine(List(Turn)).run(Machine(false, 10, 3)))
-    println(Candy.simulateMachine(List(Turn, Coin, Turn, Coin)).run(Machine(false, 0, 3)))
-    println(Candy.simulateMachine(List(Coin, Coin, Turn, Coin)).run(Machine(false, 10, 3)))
+    println(applyInputs(Machine(false, 10, 3))(Turn))
+    println(applyInputs(Machine(false, 0, 3))(Turn, Coin, Turn, Coin))
+    println(applyInputs(Machine(false, 10, 3))(Coin, Coin, Turn, Coin))
+    println(applyInputs(Machine(false, 10, 3))(Coin, Coin, Turn, Coin, Turn))
+    println(applyInputs(Machine(true, 10, 3))(Coin, Turn, Coin, Turn, Coin, Turn, Coin, Turn))
 
 //    case class Person(name: String)
 //    
