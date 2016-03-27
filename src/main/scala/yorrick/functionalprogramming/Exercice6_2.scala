@@ -259,6 +259,9 @@ object Test {
     println(applyInputs(Machine(false, 10, 3))(Coin, Coin, Turn, Coin, Turn))
     println(applyInputs(Machine(true, 10, 3))(Coin, Turn, Coin, Turn, Coin, Turn, Coin, Turn))
 
+    // command, state => Opt[event]: not a pb
+    // events, state => state: solved
+    
 //    case class Person(name: String)
 //    
 //    val initialState: State[List[Person], Person] = State.unit(Person("toto"))

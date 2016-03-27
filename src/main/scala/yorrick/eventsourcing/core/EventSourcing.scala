@@ -1,6 +1,13 @@
 package yorrick.eventsourcing.core
 
 import scala.annotation.tailrec
+import scala.util.Try
+
+
+trait NewEventSourcing[C, S, E] {
+  def generateEvent(command: C, state: S): Try[E]
+  def applyEvents(state: S)(es: E*): S
+}
 
 
 // TODO make backups
