@@ -7,18 +7,17 @@ import yorrick.functionalprogramming.async.Par._
 
 
 sealed trait Future[A] {
-  private[functionalprogramming] def apply(callback: A => Unit): Unit
+  private[functionalprogramming] def apply(callback: A => Unit)(eh: Throwable => Unit): Unit
 }
 
-
 case class UnitFuture[A](a: A) extends Future[A] {
-  def apply(callback: A => Unit): Unit = callback(a)  // just run the callback, with no ES
+  def apply(callback: A => Unit)(eh: Throwable => Unit): Unit = callback(a)  // just run the callback, with no ES
 }
 
 class ForkFuture[A](a: => Par[A], es: ExecutorService) extends Future[A] {
-  def apply(callback: A => Unit): Unit = {
+  def apply(callback: A => Unit)(eh: Throwable => Unit): Unit = {
     val af: Future[A] = a(es)
-    eval(es)(af(callback))
+    eval(es)(af(callback)(eh))
   }
 }
 
@@ -34,7 +33,7 @@ object Par {
 
     val af: Future[A] = p(es)
     // set the future's callback
-    af.apply { a => ref.set(a); latch.countDown }
+    af.apply { a => ref.set(a); latch.countDown } { case _ => latch.countDown }
 
     latch.await
     ref.get
@@ -50,11 +49,11 @@ object Par {
   def fork[A](a: => Par[A]): Par[A] = es => new ForkFuture(a, es)
 
   def map2[A, B, C](p: Par[A], p2: Par[B])(f: (A, B) => C): Par[C] = es => new Future[C] {
-    def apply(callback: C => Unit): Unit = {
+    def apply(callback: C => Unit)(eh: Throwable => Unit): Unit = {
       var ar: Option[A] = None
       var br: Option[B] = None
 
-      // this actor awaits for bith results, combines them with f and passes the result to callback
+      // this actor awaits for both results, combines them with f and passes the result to callback
       val combiner = Actor[Either[A, B]](es) {
         case Left(a) => br match {
           case None => ar = Some(a)
@@ -67,8 +66,8 @@ object Par {
         }
       }
       
-      p(es)(a => combiner ! Left(a))
-      p2(es)(b => combiner ! Right(b))
+      p(es)(a => combiner ! Left(a))(_ => ())
+      p2(es)(b => combiner ! Right(b))(_ => ())
     }
   }
 

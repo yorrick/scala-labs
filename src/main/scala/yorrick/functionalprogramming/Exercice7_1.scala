@@ -10,6 +10,8 @@ object Par {
   def unit[A](a: A): Par[A] = (es: ExecutorService) => UnitFuture(a)
   def lazyUnit[A](a: => A): Par[A] = fork(unit(a))
 
+  def run[A](s: ExecutorService)(a: Par[A]): Future[A] = a(s)
+
   private case class UnitFuture[A](get: A) extends Future[A] {
     def isDone = true
     def get(timeout: Long, unit: TimeUnit) = get
@@ -85,6 +87,33 @@ object Par {
   }
 
   def equal[A](e: ExecutorService)(p: Par[A], p2: Par[A]): Boolean = p(e).get == p2(e).get
+  
+  def choiceN[A](n: Par[Int])(choices: List[Par[A]]): Par[A] = flatMap(n)(nres => choices(nres))
+  def choice[A](p: Par[Boolean])(tc: Par[A], fc: Par[A]): Par[A] = choiceN(map(p)(pres => if (pres) 0 else 1))(List(tc, fc))
+
+  def choiceMap[K,V](key: Par[K])(choices: Map[K,Par[V]]): Par[V] = es => {
+    val k: K = key(es).get
+    choices(k)(es)
+  }
+
+  def chooser[A, B](pa: Par[A])(choices: A => Par[B]): Par[B] = es => {
+    val a = pa(es).get
+    choices(a)(es)
+  }
+
+  def choiceNWithChooser[B](n: Par[Int])(choices: List[Par[B]]): Par[B] = chooser[Int, B](n)(index => choices(index))
+  def choiceWithChooser[B](p: Par[Boolean])(tc: Par[B], fc: Par[B]): Par[B] = chooser[Boolean, B](p)(r => if (r) tc else fc)
+  
+  def join[A](a: Par[Par[A]]): Par[A] = es => {
+    val fa: Future[Par[A]] = a(es)
+    fa.get.apply(es)
+  }
+
+  def flatMapWithJoin[A, B](a: Par[A])(f: A => Par[B]): Par[B] = join(map(a)(f))
+  def joinWithFlatMap[A](a: Par[Par[A]]): Par[A] = flatMap(a)(identity)
+
+//  def map2Different[A, B, C](a: Par[A], b: Par[B])(f: (A, B) => C): Par[C] =
+//    flatMap(flatMap(a)(ar => b)) { br => unit(f(ar, br)) }
 }
 
 
