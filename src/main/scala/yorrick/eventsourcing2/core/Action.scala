@@ -1,13 +1,14 @@
-package yorrick.eventsourcing.core
+package yorrick.eventsourcing2.core
 
-import Action._
+import yorrick.eventsourcing2.core.Action._
+
 import scala.annotation.tailrec
 
 
 /**
  * Action wraps a function that builds (new state, and value) from a given state
  */
-case class Action[S, +A](run: S => (S, A)) {
+private[eventsourcing2] case class Action[S, +A](run: S => (S, A)) {
   /**
    * Adds an action to this action. 
    * flatMap chains this action to another one, using a function that builds another action
@@ -34,12 +35,12 @@ object Action {
   /**
    * Build an action that has no effect on state
    */
-  def unit[S, A](a: A): Action[S, A] = Action(s => (s, a))
+  private[eventsourcing2] def unit[S, A](a: A): Action[S, A] = Action(s => (s, a))
 
   /**
    * Builds an action from a list of actions
    */
-  def sequence[S, A](sas: List[Action[S, A]]): Action[S, List[A]] = {
+  private[eventsourcing2] def sequence[S, A](sas: List[Action[S, A]]): Action[S, List[A]] = {
     @tailrec
     def go(state: S, actions: List[Action[S, A]], valueAcc: List[A]): (S, List[A]) =
       actions match {
@@ -55,17 +56,17 @@ object Action {
   /**
    * get action just passes the state along, and also returns state
    */
-  def get[S]: Action[S, S] = Action(s => (s, s))
+  private[eventsourcing2] def get[S]: Action[S, S] = Action(s => (s, s))
 
   /**
    * set action ignores incoming state, and replaces state with the one given. It returns no value (Unit)
    */
-  def set[S](s: S): Action[S, Unit] = Action(_ => (s, ()))
+  private[eventsourcing2] def set[S](s: S): Action[S, Unit] = Action(_ => (s, ()))
 
   /**
    * Modify action just read the states, and set it to the value returned by f
    */
-  def modify[S](f: S => S): Action[S, Unit] = for {
+  private[eventsourcing2] def modify[S](f: S => S): Action[S, Unit] = for {
     s <- get // Gets the current state and assigns it to `s`.
     _ <- set(f(s)) // Sets the new state to `f` applied to `s`.
   } yield ()
@@ -73,7 +74,7 @@ object Action {
   /**
    * Hides action API to make it Input / State oriented
    */
-  def applyUpdates[I, S](z: S)(update: I => S => S)(inputs: List[I]): S = {
+  private[eventsourcing2] def applyUpdates[I, S](z: S)(update: I => S => S)(inputs: List[I]): S = {
     // A => B andThen B => C = A => C
     // Input => (Machine => Machine) andThen (Machine => Machine) => Action[Machine, Unit] = Input => Action[Machine, Unit]
     val inputToActions: I => Action[S, Unit] = update andThen modify[S] _
@@ -81,12 +82,16 @@ object Action {
     // builds an action for each input
     val actions: List[Action[S, Unit]] = inputs.map(inputToActions)
 
-    // combines bigAction and get into a new action, that returns only coins and candies
+    // combines actions and get into a new action, that returns only coins and candies
     val finalAction = for {
       _ <- sequence(actions)  // builds one action from the list of actions
       s <- get
     } yield s
 
     finalAction.run(z)._2
+  }
+
+  def applyInputs[I, S](update: I => (S => S))(s: S)(inputs: I*): S = {
+    applyUpdates(s)(update)(inputs.toList)
   }
 }
