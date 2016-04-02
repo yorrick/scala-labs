@@ -1,21 +1,32 @@
 package yorrick.avro
 
-import java.io.ByteArrayOutputStream
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 
 import com.gensler.scalavro.types.AvroType
-import spray.json.JsValue
+
+import scala.util.Try
 
 
 object Test {
-  def toJson(user: User): JsValue = {
-    val userType = AvroType[User]
-    userType.io writeJson user
+  // TODO check if a def is necessary
+  val userType = AvroType[User]
+  
+  def toJson(user: User): String = {
+    userType.io writeJson user toString
   }
 
   def toBinary(user: User): Array[Byte] = {
-    val userType = AvroType[User]
     val os = new ByteArrayOutputStream()
     userType.io.write(user, os)
     os.toByteArray
+  }
+  
+  def fromJson(content: String): Try[User] = {
+    userType.io.readJson(content)
+  }
+  
+  def fromBinary(content: Array[Byte]): Try[User] = {
+    val is = new ByteArrayInputStream(content)
+    userType.io.read(is)
   }
 }
