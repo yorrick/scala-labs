@@ -1,7 +1,7 @@
 package yorrick.avro
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
-
+import scala.language.postfixOps
 import com.gensler.scalavro.types.AvroType
 
 import scala.util.Try

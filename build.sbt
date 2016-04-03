@@ -1,4 +1,6 @@
-sbtavrohugger.SbtAvrohugger.avroSettings
+//sbtavrohugger.SbtAvrohugger.avroSettings
+
+sbtavrohugger.SbtAvrohugger.specificAvroSettings
 
 name := "algorithms1"
 
