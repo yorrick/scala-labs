@@ -1,5 +1,6 @@
 package yorrick.learningscalaz
 
+import scala.language.higherKinds
 
 // FoldLeft type class
 trait FoldLeft[F[_]] {

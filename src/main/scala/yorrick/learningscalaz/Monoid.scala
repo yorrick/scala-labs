@@ -19,7 +19,7 @@ object Monoid {
   }
 }
   
-object Test {  
+object TestMonoid {
   def sum[A: Monoid](xs: List[A]): A = {
     val m = implicitly[Monoid[A]]
     xs.foldLeft(m.mzero)(m.mappend)
