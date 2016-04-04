@@ -23,10 +23,10 @@ class AvroTest extends FlatSpec with Matchers with OptionValues with TryValues {
     toBinary(User("name", Some(2), None)) shouldBe binaryUserV2
   }
   
-  "old version user" should "be unserializable from json using latest schema" in {
-    fromJson(jsonUserV1).get
+//  "old version user" should "be unserializable from json using latest schema" in {
+//    fromJson(jsonUserV1).get
 //    fromJson(jsonUserV1).success.value shouldBe User("name", Some(2), None, middleName = "")
-  }
+//  }
   
 //  "old version user" should "be unserializable from binary using latest schema" in {
 //    fromBinary(binaryUserV1).success.value shouldBe User("name", Some(2), None, middleName = "")
