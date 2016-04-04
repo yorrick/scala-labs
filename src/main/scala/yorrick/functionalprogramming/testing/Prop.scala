@@ -2,10 +2,23 @@ package yorrick.functionalprogramming.testing
 
 import Prop._
 import Gen._
+import SGen._
 
+
+case class SGen[+A](forSize: Int => Gen[A]) {
+  def apply(n: Int): Gen[A] = forSize(n)
+  def flatMap[B](f: A => SGen[B]): SGen[B] = SGen(size => apply(size).flatMap(a => f(a)(size)))
+  def map[B](f: A => B): SGen[B] = flatMap(a => SGen.unit(f(a)))
+  def zip[B](s2: SGen[B]): SGen[(A,B)] = SGen(size => (apply(size).zip(s2(size))))
+}
+
+object SGen {
+  def unit[A](a: => A): SGen[A] = SGen(_ => Gen.unit(a))
+  def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(size => g.listOfN(size))
+}
 
 // wraps a state transition
-case class Gen[A](sample: State[RNG, A]) {
+case class Gen[+A](sample: State[RNG, A]) {
   // primitive operation
   def flatMap[B](f: A => Gen[B]): Gen[B] = Gen(sample.flatMap(a => f(a).sample))
   def foldRight[B](z: B)(f: (A, B) => B): State[RNG, B] = map(a => f(a, z)).sample
@@ -16,23 +29,19 @@ case class Gen[A](sample: State[RNG, A]) {
 
 
   // derived operations
-  def map[B](f: A => B): Gen[B] = flatMap(a => unit(f(a)))
+  def map[B](f: A => B): Gen[B] = flatMap(a => Gen.unit(f(a)))
   def map2[B, C](gen: Gen[B])(f: (A, B) => C): Gen[C] = flatMap(a => gen.map(b => f(a, b)))
   def zip[B](g: Gen[B]): Gen[(A, B)] = map2(g)((_, _))
 
   def listOfN(size: Int): Gen[List[A]] = Gen.listOfN(size, this)
   def listOfN(size: Gen[Int]): Gen[List[A]] = size.flatMap(s => this.listOfN(s))
-  
   // takes values from both gens with equal likelihood
-  def union(g: Gen[A]): Gen[A] = Gen.boolean.flatMap(b => if (b) this else g)
+
+  def unsized: SGen[A] = SGen(_ => this)
 }
 
 
 object Gen {
-  def main (args: Array[String]) {
-    println(choose(2, 5))
-  }
-  
   def flatten[A](g: Gen[Gen[A]]): Gen[A] = g.flatMap(identity)
   
   // primitive
@@ -54,6 +63,8 @@ object Gen {
   
   def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = sequence(List.fill(n)(g))
   
+  def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] = Gen.boolean.flatMap(b => if (b) g1 else g2)
+  
   def weighted[A](g1: (Double, Gen[A]), g2: (Double, Gen[A])): Gen[A] = {
     val g1Threshold = g1._1.abs / (g1._1.abs + g2._1.abs)
     
@@ -65,15 +76,102 @@ object Gen {
   
 }
 
-
-trait Prop {
-  def check: Either[(FailedCase, SuccessCount), SuccessCount]
-//  def &&(p: Prop): Prop = new Prop { val check = check && p.check}
+case class Prop(run: (MaxSize, TestCases, RNG) => Result) {
+  def &&(p: Prop): Prop = Prop { (ms, testCases, rng) =>
+    run(ms, testCases, rng) match {
+      case Passed => p.run(ms, testCases, rng)
+      case x => x
+    } 
+  }
+  
+  def ||(p: Prop): Prop = Prop { (ms, testCases, rng) =>
+    run(ms, testCases, rng) match {
+      case f: Falsified => p.run(ms, testCases, rng)
+      case x => x
+    } 
+  }
+  
 }
 
 object Prop {
-  type SuccessCount = Int
-  type FailedCase = String
+  type TestCases = Int  // number of test cases
+  type SuccessCount = Int  // number of successes
+  type FailedCase = String  // failure message
+  type MaxSize = Int
+
+  sealed trait Result {
+    def isFalsified: Boolean
+  }
+
+  case object Passed extends Result {
+    def isFalsified = false
+  }
+
+  case class Falsified(failure: FailedCase, successes: SuccessCount) extends Result {
+    def isFalsified = true
+  }
+
+  // build a property with a sized generator, forwards call to forAll(g: Int => Gen)
+  def forAll[A](g: SGen[A])(p: A => Boolean): Prop = forAll(x => g(x))(p)
   
-//  def forAll[A](g: Gen[A])(p: A => Boolean): Prop
+  def forAll[A](g: Int => Gen[A])(p: A => Boolean): Prop = Prop { (maxSize, testCasesNb, rng) =>
+    // for each size, generate this number of random cases
+    val casesPerSize = (testCasesNb + (maxSize - 1)) / maxSize  // nbTestCases = 2, max = 4, casesPerSize = 1
+      
+    // make one property per size, but no more than nbTestCases properties
+    val props: Stream[Prop] = Stream.from(0).take(testCasesNb.min(maxSize) + 1).map(i => forAll(g(i))(p))
+    
+    // combine all props into one 
+    val prop: Prop = props.map(p => Prop { (max, _, rng) =>
+      p.run(max, casesPerSize, rng)
+    }).toList.reduce(_ && _)
+    
+    prop.run(maxSize, testCasesNb, rng)
+  }
+
+  // Define a new Prop from a Generator, and a predicate. Define run method of Prop.
+  // Test code is contained in predicate p
+  // Ignores maxSize
+  def forAll[A](as: Gen[A])(f: A => Boolean): Prop = Prop { (_, testCasesNb, rng) =>
+    // uses stream API
+    randomStream(as)(rng).zip(Stream.from(0)).take(testCasesNb).map { case (a, i) =>
+      try {
+        if (f(a)) Passed else Falsified(a.toString, i)
+      } catch {
+        case e: Exception => Falsified(buildMsg(a, e), i)
+      }
+    }.find(_.isFalsified).getOrElse(Passed)
+  }
+
+  // define an infinite stream by repeatedly sampling from given generator
+  def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
+  
+  // builds message from tested value and exception
+  def buildMsg[A](s: A, e: Exception): String =
+    s"test case: $s\n" +
+      s"generated an exception: ${e.getMessage}\n" +
+      s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
+  
+  def run(p: Prop, maxSize: MaxSize = 100, testCases: TestCases = 100, rng: RNG = RNG.Simple(System.currentTimeMillis)): Unit = {
+    p.run(maxSize, testCases, rng) match {
+      case Falsified(msg, n) => 
+        println(s"! Falsified after $n passed tests:\n $msg")
+      case Passed =>
+        println(s"+ OK, passed $testCases tests.")
+    }
+    
+  }
+}
+
+
+object Test {
+  def main(args: Array[String]) {
+    val smallInt = Gen.choose(-10, 10)
+    val maxProp = forAll(listOf(smallInt)) { ns => 
+      val max = ns.max
+      !ns.exists(_ > max)
+    }
+    
+    run(maxProp)
+  }
 }
