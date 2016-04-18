@@ -25,6 +25,8 @@ object Par {
 
     UnitFuture(f(af.get, bf.get))
   }
+  
+  def equal[A](p: Par[A], p2: Par[A]): Par[Boolean] = map2(p, p2)(_ == _)
 
   def fork[A](a: => Par[A]): Par[A] = es => es.submit(new Callable[A] {
     def call = a(es).get

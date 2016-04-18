@@ -6,6 +6,8 @@ import Prop._
 import Gen._
 import SGen._
 import yorrick.functionalprogramming.Par
+import yorrick.functionalprogramming.Par
+import yorrick.functionalprogramming.Par.Par
 import yorrick.functionalprogramming.testing.CompleteStream.IterableLike
 
 
@@ -37,6 +39,7 @@ case class Gen[+A](sample: State[RNG, A]) {
   // derived operations
   def map[B](f: A => B): Gen[B] = flatMap(a => Gen.unit(f(a)))
   def map2[B, C](gen: Gen[B])(f: (A, B) => C): Gen[C] = flatMap(a => gen.map(b => f(a, b)))
+  def **[B](g: Gen[B]): Gen[(A, B)] = map2(g)((_, _))
   def zip[B](g: Gen[B]): Gen[(A, B)] = map2(g)((_, _))
 
   def listOfN(size: Int): Gen[List[A]] = Gen.listOfN(size, this)
@@ -44,6 +47,11 @@ case class Gen[+A](sample: State[RNG, A]) {
   // takes values from both gens with equal likelihood
 
   def unsized: SGen[A] = SGen(_ => this)
+}
+
+
+object ** {
+  def unapply[A,B](p: (A,B)) = Some(p)
 }
 
 
@@ -168,6 +176,17 @@ object Prop {
     }.find(_.isFalsified).getOrElse(Proved)
   }
 
+  val S = weighted(
+    .75 -> choose(1, 4).map(Executors.newFixedThreadPool),
+    .25 -> Gen.unit(Executors.newCachedThreadPool)
+  )
+  
+  def checkPar(p: Par[Boolean]): Prop =
+    forAllPar(Gen.unit(()))(_ => p)
+
+  def forAllPar[A](g: Gen[A])(f: A => Par[Boolean]): Prop =
+    forAll(S.map2(g)((_,_))) { case (s,a) => f(a)(s).get }
+
   // define an infinite stream by repeatedly sampling from given generator
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
 
@@ -237,6 +256,8 @@ object CompleteStream {
 
 
 object Test {
+  
+  
   def main(args: Array[String]) {
     val smallInt = Gen.choose(-10, 10)
     
@@ -244,25 +265,23 @@ object Test {
       val max = ns.max
       !ns.exists(_ > max)
     }
-    
     run(maxProp)
     
     val sortedProp = forAll(listOf(smallInt)) { ns =>
       val sorted = ns.sorted
       sorted.isEmpty || sorted.tail.isEmpty || !ns.zip(Seq.fill(ns.length)(sorted.last)).exists { case (a, max) => a > max }
     }
-    
     run(sortedProp)
 
-    val ES: ExecutorService = Executors.newCachedThreadPool
-    val p1 = Prop.forAll(Gen.unit(Par.unit(1))) { i =>
-      Par.map(i)(_ + 1)(ES).get == Par.unit(2)(ES).get
-    }
-    
-    run(check(true))
-
     val maxByteProp = checkAll[Byte](_.toInt < 127)
-
     run(maxByteProp)
+
+    val parProp = Prop.checkPar {
+      Par.equal (
+        Par.map(Par.unit(1))(_ + 1),
+        Par.unit(2)
+      )
+    }
+    run(parProp)
   }
 }
