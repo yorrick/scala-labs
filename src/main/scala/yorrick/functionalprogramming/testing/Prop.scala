@@ -6,6 +6,7 @@ import Prop._
 import Gen._
 import SGen._
 import yorrick.functionalprogramming.Par
+import yorrick.functionalprogramming.testing.CompleteStream.IterableLike
 
 
 case class SGen[+A](forSize: Int => Gen[A]) {
@@ -21,16 +22,6 @@ object SGen {
   def listOf1[A](g: Gen[A]): SGen[List[A]] = SGen(n => g.listOfN(n max 1))
 }
 
-
-///**
-// * Generators that generate all possible values for some types
-// */
-//trait FullSpaceGen
-//
-//object FullSpaceGen {
-//
-//
-//}
 
 // wraps a state transition
 case class Gen[+A](sample: State[RNG, A]) {
@@ -162,14 +153,24 @@ object Prop {
       }
     }.find(_.isFalsified).getOrElse(Passed)
   }
-
+  
   def check(p: => Boolean): Prop = Prop { (_, _, _) =>
     if (p) Proved else Falsified("()", 0)
+  }
+  
+  def checkAll[A: Ordering](f: A => Boolean)(implicit ev: IterableLike[A]): Prop = Prop { (_, _, _) =>
+    CompleteStream.iterableStream[A].zip(Stream.from(0)).map { case (a, i) =>
+      try {
+        if (f(a)) Passed else Falsified(a.toString, i)
+      } catch {
+        case e: Exception => Falsified(buildMsg(a, e), i)
+      }
+    }.find(_.isFalsified).getOrElse(Proved)
   }
 
   // define an infinite stream by repeatedly sampling from given generator
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
-  
+
   // builds message from tested value and exception
   def buildMsg[A](s: A, e: Exception): String =
     s"test case: $s\n" +
@@ -189,6 +190,50 @@ object Prop {
   }
 }
 
+
+object CompleteStream {
+
+  trait IterableLike[A] {
+    def min: A
+    def max: A
+    def increment(a: A): A
+  }
+
+  object IterableLike {
+    implicit object ByteCompleteStreamLike extends IterableLike[Byte] {
+      def min = Byte.MinValue
+      def max = Byte.MaxValue
+      def increment(b: Byte): Byte = (b + 1).toByte
+    }
+  }
+
+  trait EnumLike[A] {
+    def values: Seq[A]
+  }
+
+  object EnumLike {
+    implicit object BooleanEnumLike extends EnumLike[Boolean] {
+      val values = Seq(true, false)
+    }
+  }
+
+  def iterableStream[A: Ordering](implicit ev: IterableLike[A]) = {
+    def go(a: A): Stream[A] =
+      if (implicitly[Ordering[A]].compare(a, ev.max) < 0) {
+        Stream.cons(a, go(ev.increment(a)))
+      } else Stream.empty
+
+    go(ev.min)
+  }
+
+  def enumStream[A: EnumLike] = Stream(implicitly[EnumLike[A]].values: _*)
+
+  def main(args: Array[String]) {
+    println(iterableStream[Byte].take(10).toList)
+    println(enumStream[Boolean].take(10).toList)
+  }
+
+}
 
 
 object Test {
@@ -215,5 +260,9 @@ object Test {
     }
     
     run(check(true))
+
+    val maxByteProp = checkAll[Byte](_.toInt < 127)
+
+    run(maxByteProp)
   }
 }

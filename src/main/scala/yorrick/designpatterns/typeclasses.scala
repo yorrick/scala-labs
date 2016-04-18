@@ -1,5 +1,7 @@
 package yorrick.designpatterns
 
+import yorrick.functionalprogramming.testing.Stream
+
 import annotation.implicitNotFound
 
 
@@ -27,5 +29,10 @@ object Statistics {
   
   def mean[T](xs: Vector[T])(implicit ev: NumberLike[T]): T =
     ev.divide(xs.reduce(ev.plus(_, _)), xs.size)
+  
+  def mean2[T: NumberLike](xs: Vector[T]) = {
+    val ev = implicitly[NumberLike[T]]
+    ev.divide(xs.reduce(ev.plus(_, _)), xs.size)
+  }
 
 }

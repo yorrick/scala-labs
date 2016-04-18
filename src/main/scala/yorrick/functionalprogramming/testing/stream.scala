@@ -254,4 +254,12 @@ object Stream {
 
   // could also of course be implemented as constant(1)
   val onesViaUnfold = unfold(1)(_ => Some((1,1)))
+
+  implicit object ByteStream extends Stream[Byte] {
+    def plus(x: Double, y: Double): Double = x + y
+    def divide(x: Double, y: Int): Double = x / y
+    def minus(x: Double, y: Double): Double = x - y
+  }
 }
+
+
