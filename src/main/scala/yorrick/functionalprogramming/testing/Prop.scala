@@ -1,8 +1,11 @@
 package yorrick.functionalprogramming.testing
 
+import java.util.concurrent.{ExecutorService, Executors}
+
 import Prop._
 import Gen._
 import SGen._
+import yorrick.functionalprogramming.Par
 
 
 case class SGen[+A](forSize: Int => Gen[A]) {
@@ -15,7 +18,19 @@ case class SGen[+A](forSize: Int => Gen[A]) {
 object SGen {
   def unit[A](a: => A): SGen[A] = SGen(_ => Gen.unit(a))
   def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(size => g.listOfN(size))
+  def listOf1[A](g: Gen[A]): SGen[List[A]] = SGen(n => g.listOfN(n max 1))
 }
+
+
+///**
+// * Generators that generate all possible values for some types
+// */
+//trait FullSpaceGen
+//
+//object FullSpaceGen {
+//
+//
+//}
 
 // wraps a state transition
 case class Gen[+A](sample: State[RNG, A]) {
@@ -57,8 +72,7 @@ object Gen {
   def fromInt[A](f: Int => A): Gen[A] = Gen(State(RNG.nonNegativeInt)).map(f)
   
   def toOpt[A](g: Gen[A]): Gen[Option[A]] = g.map(Some(_))
-  
-  
+
   def boolean: Gen[Boolean] = Gen(State(RNG.nonNegativeInt)).map(n => n % 2 == 0)
   
   def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = sequence(List.fill(n)(g))
@@ -80,6 +94,7 @@ case class Prop(run: (MaxSize, TestCases, RNG) => Result) {
   def &&(p: Prop): Prop = Prop { (ms, testCases, rng) =>
     run(ms, testCases, rng) match {
       case Passed => p.run(ms, testCases, rng)
+      case Proved => p.run(ms, testCases, rng)
       case x => x
     } 
   }
@@ -107,6 +122,10 @@ object Prop {
     def isFalsified = false
   }
 
+  case object Proved extends Result {
+    def isFalsified = false
+  }
+
   case class Falsified(failure: FailedCase, successes: SuccessCount) extends Result {
     def isFalsified = true
   }
@@ -114,6 +133,7 @@ object Prop {
   // build a property with a sized generator, forwards call to forAll(g: Int => Gen)
   def forAll[A](g: SGen[A])(p: A => Boolean): Prop = forAll(x => g(x))(p)
   
+  // utility function
   def forAll[A](g: Int => Gen[A])(p: A => Boolean): Prop = Prop { (maxSize, testCasesNb, rng) =>
     // for each size, generate this number of random cases
     val casesPerSize = (testCasesNb + (maxSize - 1)) / maxSize  // nbTestCases = 2, max = 4, casesPerSize = 1
@@ -143,6 +163,10 @@ object Prop {
     }.find(_.isFalsified).getOrElse(Passed)
   }
 
+  def check(p: => Boolean): Prop = Prop { (_, _, _) =>
+    if (p) Proved else Falsified("()", 0)
+  }
+
   // define an infinite stream by repeatedly sampling from given generator
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
   
@@ -158,20 +182,38 @@ object Prop {
         println(s"! Falsified after $n passed tests:\n $msg")
       case Passed =>
         println(s"+ OK, passed $testCases tests.")
+      case Proved =>
+        println(s"+ OK, proved property.")
     }
     
   }
 }
 
 
+
 object Test {
   def main(args: Array[String]) {
     val smallInt = Gen.choose(-10, 10)
-    val maxProp = forAll(listOf(smallInt)) { ns => 
+    
+    val maxProp = forAll(listOf1(smallInt)) { ns =>
       val max = ns.max
       !ns.exists(_ > max)
     }
     
     run(maxProp)
+    
+    val sortedProp = forAll(listOf(smallInt)) { ns =>
+      val sorted = ns.sorted
+      sorted.isEmpty || sorted.tail.isEmpty || !ns.zip(Seq.fill(ns.length)(sorted.last)).exists { case (a, max) => a > max }
+    }
+    
+    run(sortedProp)
+
+    val ES: ExecutorService = Executors.newCachedThreadPool
+    val p1 = Prop.forAll(Gen.unit(Par.unit(1))) { i =>
+      Par.map(i)(_ + 1)(ES).get == Par.unit(2)(ES).get
+    }
+    
+    run(check(true))
   }
 }
