@@ -186,6 +186,9 @@ object Prop {
 
   def forAllPar[A](g: Gen[A])(f: A => Par[Boolean]): Prop =
     forAll(S.map2(g)((_,_))) { case (s,a) => f(a)(s).get }
+  
+  def forAllPar[A](g: SGen[A])(f: A => Par[Boolean]): Prop =
+    forAll(x => S.map2(g(x))((_,_))) { case (s,a) => f(a)(s).get }
 
   // define an infinite stream by repeatedly sampling from given generator
   def randomStream[A](g: Gen[A])(rng: RNG): Stream[A] = Stream.unfold(rng)(rng => Some(g.sample.run(rng)))
@@ -256,8 +259,6 @@ object CompleteStream {
 
 
 object Test {
-  
-  
   def main(args: Array[String]) {
     val smallInt = Gen.choose(-10, 10)
     
@@ -283,5 +284,14 @@ object Test {
       )
     }
     run(parProp)
+    
+    val listParProp = Prop.forAllPar(listOf1(smallInt)) { ns =>
+      Par.equal (
+        Par.map(Par.unit(ns))(_.tail),
+        Par.unit(ns.tail)
+      )
+    }
+    
+    run(listParProp)
   }
 }
