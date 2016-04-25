@@ -57,36 +57,36 @@ object ** {
 
 object Gen {
   def flatten[A](g: Gen[Gen[A]]): Gen[A] = g.flatMap(identity)
-  
+
   // primitive
   def unit[A](a: => A): Gen[A] = Gen(State.unit(a))
   def sequence[A](gens: List[Gen[A]]): Gen[List[A]] = Gen(State.sequence(gens.map(_.sample)))
 
   def choose(start: Int, stopExclusive: Int): Gen[Int] =
     Gen(State(RNG.nonNegativeInt)).map(n => start + n % (stopExclusive - start))
-  
+
   def choose2(start: Int, stopExclusive: Int): Gen[(Int, Int)] =
     Gen(State(RNG.nonNegativeInt)).zip(Gen(State(RNG.nonNegativeInt)))
-  
+
   def fromInt[A](f: Int => A): Gen[A] = Gen(State(RNG.nonNegativeInt)).map(f)
-  
+
   def toOpt[A](g: Gen[A]): Gen[Option[A]] = g.map(Some(_))
 
   def boolean: Gen[Boolean] = Gen(State(RNG.nonNegativeInt)).map(n => n % 2 == 0)
-  
+
   def listOfN[A](n: Int, g: Gen[A]): Gen[List[A]] = sequence(List.fill(n)(g))
-  
+
   def union[A](g1: Gen[A], g2: Gen[A]): Gen[A] = Gen.boolean.flatMap(b => if (b) g1 else g2)
-  
+
   def weighted[A](g1: (Double, Gen[A]), g2: (Double, Gen[A])): Gen[A] = {
     val g1Threshold = g1._1.abs / (g1._1.abs + g2._1.abs)
-    
+
     Gen(State(RNG.double)).flatMap { d =>
       if (d <= g1Threshold) g1._2
       else g2._2
     }
   }
-  
+
 }
 
 case class Prop(run: (MaxSize, TestCases, RNG) => Result) {
@@ -95,16 +95,16 @@ case class Prop(run: (MaxSize, TestCases, RNG) => Result) {
       case Passed => p.run(ms, testCases, rng)
       case Proved => p.run(ms, testCases, rng)
       case x => x
-    } 
+    }
   }
-  
+
   def ||(p: Prop): Prop = Prop { (ms, testCases, rng) =>
     run(ms, testCases, rng) match {
       case f: Falsified => p.run(ms, testCases, rng)
       case x => x
-    } 
+    }
   }
-  
+
 }
 
 object Prop {
@@ -131,20 +131,20 @@ object Prop {
 
   // build a property with a sized generator, forwards call to forAll(g: Int => Gen)
   def forAll[A](g: SGen[A])(p: A => Boolean): Prop = forAll(x => g(x))(p)
-  
+
   // utility function
   def forAll[A](g: Int => Gen[A])(p: A => Boolean): Prop = Prop { (maxSize, testCasesNb, rng) =>
     // for each size, generate this number of random cases
     val casesPerSize = (testCasesNb + (maxSize - 1)) / maxSize  // nbTestCases = 2, max = 4, casesPerSize = 1
-      
+
     // make one property per size, but no more than nbTestCases properties
     val props: Stream[Prop] = Stream.from(0).take(testCasesNb.min(maxSize) + 1).map(i => forAll(g(i))(p))
-    
-    // combine all props into one 
+
+    // combine all props into one
     val prop: Prop = props.map(p => Prop { (max, _, rng) =>
       p.run(max, casesPerSize, rng)
     }).toList.reduce(_ && _)
-    
+
     prop.run(maxSize, testCasesNb, rng)
   }
 
@@ -161,11 +161,11 @@ object Prop {
       }
     }.find(_.isFalsified).getOrElse(Passed)
   }
-  
+
   def check(p: => Boolean): Prop = Prop { (_, _, _) =>
     if (p) Proved else Falsified("()", 0)
   }
-  
+
   def checkAll[A: Ordering](f: A => Boolean)(implicit ev: IterableLike[A]): Prop = Prop { (_, _, _) =>
     CompleteStream.iterableStream[A].zip(Stream.from(0)).map { case (a, i) =>
       try {
@@ -180,13 +180,13 @@ object Prop {
     .75 -> choose(1, 4).map(Executors.newFixedThreadPool),
     .25 -> Gen.unit(Executors.newCachedThreadPool)
   )
-  
+
   def checkPar(p: Par[Boolean]): Prop =
     forAllPar(Gen.unit(()))(_ => p)
 
   def forAllPar[A](g: Gen[A])(f: A => Par[Boolean]): Prop =
     forAll(S.map2(g)((_,_))) { case (s,a) => f(a)(s).get }
-  
+
   def forAllPar[A](g: SGen[A])(f: A => Par[Boolean]): Prop =
     forAll(x => S.map2(g(x))((_,_))) { case (s,a) => f(a)(s).get }
 
@@ -198,17 +198,29 @@ object Prop {
     s"test case: $s\n" +
       s"generated an exception: ${e.getMessage}\n" +
       s"stack trace:\n ${e.getStackTrace.mkString("\n")}"
-  
+
   def run(p: Prop, maxSize: MaxSize = 100, testCases: TestCases = 100, rng: RNG = RNG.Simple(System.currentTimeMillis)): Unit = {
     p.run(maxSize, testCases, rng) match {
-      case Falsified(msg, n) => 
+      case Falsified(msg, n) =>
         println(s"! Falsified after $n passed tests:\n $msg")
       case Passed =>
         println(s"+ OK, passed $testCases tests.")
       case Proved =>
         println(s"+ OK, proved property.")
     }
-    
+
+  }
+
+  /**
+   * Builds nested Par[Int] pars
+   */
+  val pint: Gen[Par[Int]] = Gen.choose(0,10) flatMap { smallInt: Int =>
+    Gen.choose(0, 2).flatMap { choice => choice match {
+      case 0 => pint  // recursive call, continue nesting Par
+      case 1 => Gen.unit(Par.fork(Par.unit(smallInt)))  // fork
+      case 2 => Gen.unit(Par.unit(smallInt))  // simple unit
+      case 3 => Gen.unit(Par.map2(Par.unit(smallInt), Par.unit(1))(_ + _))  // map2
+    }}
   }
 }
 
@@ -261,13 +273,13 @@ object CompleteStream {
 object Test {
   def main(args: Array[String]) {
     val smallInt = Gen.choose(-10, 10)
-    
+
     val maxProp = forAll(listOf1(smallInt)) { ns =>
       val max = ns.max
       !ns.exists(_ > max)
     }
     run(maxProp)
-    
+
     val sortedProp = forAll(listOf(smallInt)) { ns =>
       val sorted = ns.sorted
       sorted.isEmpty || sorted.tail.isEmpty || !ns.zip(Seq.fill(ns.length)(sorted.last)).exists { case (a, max) => a > max }
@@ -284,14 +296,26 @@ object Test {
       )
     }
     run(parProp)
-    
-    val listParProp = Prop.forAllPar(listOf1(smallInt)) { ns =>
-      Par.equal (
-        Par.map(Par.unit(ns))(_.tail),
-        Par.unit(ns.tail)
+
+    println("mapParProp")
+    val mapParProp = Prop.forAllPar(pint) { intPar: Par[Int] =>
+        Par.equal (
+          Par.map(intPar)(identity),
+          intPar
+        )
+    }
+    run(mapParProp)
+
+//    Express the property about fork from chapter 7, that fork(x) == x.
+    println("forkProp")
+    val forkProp = Prop.forAllPar(pint) { intPar: Par[Int] =>
+      Par.equal(
+        Par.fork(intPar),
+        intPar
       )
     }
-    
-    run(listParProp)
+    // commented because this version of Par dead locks
+//    run(forkProp, testCases = 1)
+
   }
 }
