@@ -163,6 +163,8 @@ object Prop {
   // build a property with a sized generator, forwards call to forAll(g: Int => Gen)
   def forAll[A](g: SGen[A])(p: A => Boolean): Prop = forAll(x => g(x))(p)
 
+  def forAllWith[A](g: SGen[A])(p: A => Boolean): Prop = forAll(x => g(x))(p)
+
   // utility function
   private def forAll[A](g: Int => Gen[A])(p: A => Boolean): Prop = Prop { (maxSize, testCasesNb, rng) =>
     // for each size, generate this number of random cases
@@ -404,12 +406,18 @@ object Test {
     }
     run(filterProp)
 
-
     println("unfoldProp")
+    val unfoldProp = Prop.forAll(listOf(smallInt)) { list =>
+      val continueGen: Gen[Boolean] = Gen.choose(0, 10).map(_ == 0)
+      val continue: Boolean = continueGen.sample.run(RNG.Simple(list.size))._1
 
-    val s = Stream.unfold(List(1,2,4)){
-      case Nil => None
-      case head :: t => Some((head, t))
+      val s = Stream.unfold(list) {
+        case h :: t if continue => Some((h, t))
+        case _ => None
+      }
+
+      true
     }
+    run(unfoldProp)
   }
 }
