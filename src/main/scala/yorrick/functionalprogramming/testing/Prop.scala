@@ -9,6 +9,10 @@ import yorrick.functionalprogramming.Par
 import yorrick.functionalprogramming.Par
 import yorrick.functionalprogramming.Par.Par
 import yorrick.functionalprogramming.testing.CompleteStream.IterableLike
+import Math._
+import yorrick.functionalprogramming.testing._
+
+import scala.util.Try
 
 
 case class SGen[+A](forSize: Int => Gen[A]) {
@@ -87,6 +91,33 @@ object Gen {
     }
   }
 
+  def genStringIntFn(g: Gen[Int]): Gen[String => Int] = g.map(i => string => Try(string.toInt).getOrElse(-1) + i)
+
+  def genStringFn[A](g: Gen[A]): Gen[String => A] = Gen {
+    State { (rng: RNG) =>
+      val (seed, rng2) = rng.nextInt // we still use `rng` to produce a seed, so we get a new function each time
+      
+      // this function is always different since it uses rng2, as said above
+      // the state is also changed depending on the value of the string, so resulting A will depend on rng AND string value
+      val f: String => A = (s: String) => g.sample.run(RNG.Simple(seed.toLong ^ s.hashCode.toLong))._1
+      
+      // return the function f and rng2
+      (f, rng2)
+    }
+  }
+
+  def genFn[I, O](g: Gen[O]): Gen[I => O] = Gen {
+    State { (rng: RNG) =>
+      val (seed, rng2) = rng.nextInt // we still use `rng` to produce a seed, so we get a new function each time
+
+      // this function is always different since it uses rng2, as said above
+      // the state is also changed depending on the value of the string, so resulting A will depend on rng AND string value
+      val f: I => O = (s: I) => g.sample.run(RNG.Simple(seed.toLong ^ s.hashCode.toLong))._1
+
+      // return the function f and rng2
+      (f, rng2)
+    }
+  }
 }
 
 case class Prop(run: (MaxSize, TestCases, RNG) => Result) {
@@ -133,7 +164,7 @@ object Prop {
   def forAll[A](g: SGen[A])(p: A => Boolean): Prop = forAll(x => g(x))(p)
 
   // utility function
-  def forAll[A](g: Int => Gen[A])(p: A => Boolean): Prop = Prop { (maxSize, testCasesNb, rng) =>
+  private def forAll[A](g: Int => Gen[A])(p: A => Boolean): Prop = Prop { (maxSize, testCasesNb, rng) =>
     // for each size, generate this number of random cases
     val casesPerSize = (testCasesNb + (maxSize - 1)) / maxSize  // nbTestCases = 2, max = 4, casesPerSize = 1
 
@@ -289,33 +320,96 @@ object Test {
     val maxByteProp = checkAll[Byte](_.toInt < 127)
     run(maxByteProp)
 
-    val parProp = Prop.checkPar {
-      Par.equal (
-        Par.map(Par.unit(1))(_ + 1),
-        Par.unit(2)
-      )
-    }
-    run(parProp)
+//    val parProp = Prop.checkPar {
+//      Par.equal (
+//        Par.map(Par.unit(1))(_ + 1),
+//        Par.unit(2)
+//      )
+//    }
+//    run(parProp)
 
-    println("mapParProp")
-    val mapParProp = Prop.forAllPar(pint) { intPar: Par[Int] =>
-        Par.equal (
-          Par.map(intPar)(identity),
-          intPar
-        )
-    }
-    run(mapParProp)
+//    println("mapParProp")
+//    val mapParProp = Prop.forAllPar(pint) { intPar: Par[Int] =>
+//        Par.equal (
+//          Par.map(intPar)(identity),
+//          intPar
+//        )
+//    }
+//    run(mapParProp)
 
 //    Express the property about fork from chapter 7, that fork(x) == x.
-    println("forkProp")
-    val forkProp = Prop.forAllPar(pint) { intPar: Par[Int] =>
-      Par.equal(
-        Par.fork(intPar),
-        intPar
-      )
-    }
+//    println("forkProp")
+//    val forkProp = Prop.forAllPar(pint) { intPar: Par[Int] =>
+//      Par.equal(
+//        Par.fork(intPar),
+//        intPar
+//      )
+//    }
     // commented because this version of Par dead locks
 //    run(forkProp, testCases = 1)
 
+
+//    We want to enforce that `takeWhile` returns the _longest_ prefix whose elements satisfy the predicate. There are various ways to state this, but the general idea is that the remaining list, if non-empty, should start with an element that does _not_ satisfy the predicate.
+
+    
+    println("takeWhileProp")
+    val isEven = (i: Int) => i % 2 == 0
+    val takeWhileProp = Prop.forAll(listOf(smallInt)) { intList =>
+      intList.takeWhile(isEven).forall(isEven)
+    }
+    run(takeWhileProp)
+
+    println("takeWhileProp2")
+    val takeWhileProp2 = Prop.forAll(listOf(smallInt ** Gen.genStringIntFn(smallInt))) { list: List[(Int, String => Int)] =>
+      val (intList, functionList) = list.unzip
+
+      functionList.forall { f =>
+        val fn: String => Boolean = f andThen isEven
+        intList.map(_.toString).takeWhile(fn).forall(fn)
+      }
+    }
+    run(takeWhileProp2)
+    
+    println("takeWhileProp3")
+    val takeWhileProp3 = Prop.forAll(listOf(smallInt ** Gen.genStringFn(smallInt))) { list: List[(Int, String => Int)] =>
+      val (intList, functionList) = list.unzip
+
+      functionList.forall { f =>
+        val fn: String => Boolean = f andThen isEven
+        intList.map(_.toString).takeWhile(fn).forall(fn)
+      }
+    }
+    run(takeWhileProp3)
+    
+    println("dropProp")
+    val dropProp = Prop.forAll(listOf(smallInt ** Gen.choose(0, 1000))) { list =>
+      val (intList, dropNList) = list.unzip
+
+      dropNList.forall { d =>
+        val drop = d min intList.size
+        intList.drop(drop).size + drop == intList.size
+      }
+    }
+    run(dropProp)
+
+    val filterGen: Gen[Int => Boolean] = genFn[Int, Int](smallInt).map(f => f andThen(_ % 2 == 0))
+
+    println("filterProp")
+    val filterProp = Prop.forAll(listOf(smallInt ** filterGen)) { list: List[(Int, Int => Boolean)] =>
+      val (intList, functionList) = list.unzip
+
+      functionList.forall { f =>
+        intList.filter(f).forall(f)
+      }
+    }
+    run(filterProp)
+
+
+    println("unfoldProp")
+
+    val s = Stream.unfold(List(1,2,4)){
+      case Nil => None
+      case head :: t => Some((head, t))
+    }
   }
 }
