@@ -159,7 +159,7 @@ object Exercice3_2 {
     case (Cons(hl, tl), Cons(hsub, tsub)) => if (hl == hsub) hasSubsequence(tl, tsub) else hasSubsequence(tl, sub)
   }
   
-  sealed trait Tree[A]
+  sealed trait Tree[+A]
   case class Leaf[A](value: A) extends Tree[A]
   case class Branch[A](left: Tree[A], right: Tree[A]) extends Tree[A]
 

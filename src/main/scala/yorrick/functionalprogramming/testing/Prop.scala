@@ -5,12 +5,15 @@ import java.util.concurrent.{ExecutorService, Executors}
 import Prop._
 import Gen._
 import SGen._
+import yorrick.functionalprogramming.Exercice3_2.{Branch, Leaf, Tree}
+import yorrick.functionalprogramming.Exercice4_6.Right
 import yorrick.functionalprogramming.Par
 import yorrick.functionalprogramming.Par
 import yorrick.functionalprogramming.Par.Par
 import yorrick.functionalprogramming.testing.CompleteStream.IterableLike
-import Math._
+import scala.language.postfixOps
 import yorrick.functionalprogramming.testing._
+
 
 import scala.util.Try
 
@@ -26,6 +29,16 @@ object SGen {
   def unit[A](a: => A): SGen[A] = SGen(_ => Gen.unit(a))
   def listOf[A](g: Gen[A]): SGen[List[A]] = SGen(size => g.listOfN(size))
   def listOf1[A](g: Gen[A]): SGen[List[A]] = SGen(n => g.listOfN(n max 1))
+  def treeOf[A](g: Gen[A]): SGen[Tree[A]] = listOf1(g).map(treeFromList)
+
+  def treeFromList[A](values: List[A]): Tree[A] = values match {
+    case Nil => throw new Exception("Should not happen")
+    case h :: Nil => Leaf(h)
+    case l => {
+      val (left, right) = l.splitAt(l.size / 2)
+      Branch(treeFromList(left), treeFromList(right))
+    }
+  }
 }
 
 
@@ -419,5 +432,33 @@ object Test {
       true
     }
     run(unfoldProp)
+
+    println("foldTreeProp")
+    val foldTreeProp = Prop.forAll(treeOf(Gen.choose(0, 10))) { tree =>
+      import yorrick.functionalprogramming.Exercice3_2.fold
+      fold(tree)(identity)(_ + _) >= 1
+    }
+    run(foldTreeProp)
+
+    println("optionSequenceProp")
+    import yorrick.functionalprogramming.Exercice4_3.Some
+    val optionSequenceProp = Prop.forAll(listOf(smallInt).map(_.map(Some(_)))) { list =>
+      import yorrick.functionalprogramming.Exercice4_3.sequence
+      sequence(list).map(_.size == list.size).getOrElse(false)
+    }
+    run(optionSequenceProp)
+
+    println("eitherSequenceProp")
+    import yorrick.functionalprogramming.Exercice4_6.Right
+    val eitherSequenceProp = Prop.forAll(listOf(smallInt).map(_.map(Right(_)))) { list =>
+      import yorrick.functionalprogramming.Exercice4_6.sequence
+      sequence(list).map(_.size == list.size) match {
+        case Right(_) => true
+        case _ => false
+      }
+    }
+    run(eitherSequenceProp)
   }
+
+
 }
