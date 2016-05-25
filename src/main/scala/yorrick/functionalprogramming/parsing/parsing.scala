@@ -154,7 +154,6 @@ def run[A](p: Parser[A])(input: String): Either[ParseError,A]
       self.flatMap(p)(f)
 
     def label(msg: String): Parser[A] = self.label(msg)(p)
-
     def scope(msg: String): Parser[A] = self.scope(msg)(p)
 
     def *>[B](p2: => Parser[B]) = self.skipL(p, p2)
@@ -165,12 +164,18 @@ def run[A](p: Parser[A])(input: String): Either[ParseError,A]
     def as[B](b: B): Parser[B] = self.map(self.slice(p))(_ => b)
     def opL(op: Parser[(A,A) => A]): Parser[A] = self.opL(p)(op)
   }
+
   object Laws {
     def equal[A](p1: Parser[A], p2: Parser[A])(in: Gen[String]): Prop =
       forAll(in)(s => run(p1)(s) == run(p2)(s))
 
     def mapLaw[A](p: Parser[A])(in: Gen[String]): Prop =
       equal(p, p.map(a => a))(in)
+
+    def test: Unit = {
+      val p: Parser[((String, String), String)] = "toto" ** "tata" ** "titi"
+    }
+
   }
 }
 
