@@ -40,9 +40,9 @@ trait Parsers[ParseError, Parser[+_]] { self =>
 
     def mapLaw[A](p: Parser[A])(in: Gen[String]): Prop = equal(p, p.map(identity))(in)
 
-    def succeedLaw[A](in: Gen[String]): Prop = forAll(in) { s =>
-      run(succeed(s)) == Right(s)
-    }
+//    def succeedLaw[A](in: Gen[String]): Prop = forAll(in) { s =>
+//      run(succeed(s)) == Right(s)
+//    }
   }
 }
 

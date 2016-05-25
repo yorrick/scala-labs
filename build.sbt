@@ -15,7 +15,9 @@ libraryDependencies ++= Seq(
     "junit" % "junit" % "4.12" % "test",
     "com.novocode" % "junit-interface" % "0.11" % "test",
     "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
-    "com.gensler" %% "scalavro" % "0.6.2"
+    "com.gensler" %% "scalavro" % "0.6.2",
+    "org.scaldi" %% "scaldi" % "0.3.2",
+    "net.codingwell" %% "scala-guice" % "4.0.1"
 )
 
 scalacOptions ++= List("-feature","-deprecation", "-unchecked", "-Xlint")

@@ -13,6 +13,8 @@ object Math {
     def divide(x: T, y: Int): T
     def minus(x: T, y: T): T
   }
+
+  type OtherDouble = Double
   
   object NumberLike {
     implicit object NumberLikeDouble extends NumberLike[Double] {
@@ -35,4 +37,9 @@ object Statistics {
     ev.divide(xs.reduce(ev.plus(_, _)), xs.size)
   }
 
+
+  def main(args: Array[String]) {
+    val values = Vector(2.0, 3.0, 4.2)
+    println(mean(values))
+  }
 }
