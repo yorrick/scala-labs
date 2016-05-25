@@ -62,6 +62,7 @@ trait Parsers[ParseError, Parser[+_]] { self =>
 
       char('a').many.slice.map(_.size)
 
+      val manyAMany1B: Parser[(Int, Int)] = char('a').many.slice.map(_.size) ** char('b').many1.slice.map(_.size)
     }
   }
 }
