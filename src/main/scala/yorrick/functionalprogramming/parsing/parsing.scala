@@ -18,7 +18,7 @@ trait Parsers[ParseError, Parser[+_]] { self =>
   def map[A, B](a: Parser[A])(f: A => B): Parser[B]
 
   implicit def string(s: String): Parser[String]
-  implicit def operators[A](p: Parser[A]) = ParserOps[A](p)
+  implicit def operators[A](p: Parser[A]): ParserOps[A] = ParserOps[A](p)
   implicit def asStringParser[A](a: A)(implicit f: A => Parser[String]): ParserOps[String] = ParserOps(f(a))
 
   def char(c: Char): Parser[Char] = string(c.toString).map(_.charAt(0))
@@ -40,9 +40,9 @@ trait Parsers[ParseError, Parser[+_]] { self =>
 
     def mapLaw[A](p: Parser[A])(in: Gen[String]): Prop = equal(p, p.map(identity))(in)
 
-//    def succeedLaw[A](in: Gen[String]): Prop = forAll(in) { s =>
-//      run(succeed(s)) == Right(s)
-//    }
+    def succeedLaw[A](in: Gen[String]): Prop = forAll(in) { s =>
+      run(succeed(s))("anything at all") == Right(s)
+    }
   }
 }
 
