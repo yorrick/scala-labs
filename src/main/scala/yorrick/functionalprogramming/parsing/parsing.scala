@@ -15,9 +15,9 @@ trait Parsers[ParseError, Parser[+_]] { self =>
   def or[A](p1: Parser[A], p2: Parser[A]): Parser[A]
   def map[A, B](a: Parser[A])(f: A => B): Parser[B]
   def slice[A](p: Parser[A]): Parser[String]
-  def product[A, B](p: Parser[A], p2: Parser[B]): Parser[(A, B)]
+  def product[A, B](p: Parser[A], p2: => Parser[B]): Parser[(A, B)]
 
-  def map2[A, B, C](p: Parser[A], p2: Parser[B])(f: (A, B) => C): Parser[C] = product(p, p2).map(f.tupled)
+  def map2[A, B, C](p: Parser[A], p2: => Parser[B])(f: (A, B) => C): Parser[C] = product(p, p2).map(f.tupled)
   def many1[A](p: Parser[A]): Parser[List[A]] = map2(p, p.many)(_ :: _)
   def many[A](p: Parser[A]): Parser[List[A]] = map2(p, many(p))(_ :: _) or succeed(List())
 
