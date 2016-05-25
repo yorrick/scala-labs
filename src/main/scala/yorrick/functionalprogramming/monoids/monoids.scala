@@ -53,6 +53,6 @@ object Monoid {
 
   def endoMonoid[A] = new Monoid[A => A] {
     def op(f1: A => A, f2: A => A): A => A = f1 compose f2
-    val zero = identity[A]
+    val zero = identity[A]_
   }
 }

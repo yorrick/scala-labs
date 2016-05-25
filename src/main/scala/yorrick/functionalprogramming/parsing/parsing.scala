@@ -171,11 +171,6 @@ def run[A](p: Parser[A])(input: String): Either[ParseError,A]
 
     def mapLaw[A](p: Parser[A])(in: Gen[String]): Prop =
       equal(p, p.map(a => a))(in)
-
-    def test: Unit = {
-      val p: Parser[((String, String), String)] = "toto" ** "tata" ** "titi"
-    }
-
   }
 }
 
