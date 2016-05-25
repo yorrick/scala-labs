@@ -12,14 +12,15 @@ trait ParseError
 trait Parsers[ParseError, Parser[+_]] { self =>
   def run[A](p: Parser[A])(input: String): Either[ParseError, A]
 
-  def or[A](p1: Parser[A], p2: Parser[A]): Parser[A]
+  def or[A](p1: Parser[A], p2: => Parser[A]): Parser[A]
   def map[A, B](a: Parser[A])(f: A => B): Parser[B]
   def slice[A](p: Parser[A]): Parser[String]
   def product[A, B](p: Parser[A], p2: => Parser[B]): Parser[(A, B)]
+  def wrap[A](p: => Parser[A]): Parser[A]
 
   def map2[A, B, C](p: Parser[A], p2: => Parser[B])(f: (A, B) => C): Parser[C] = product(p, p2).map(f.tupled)
   def many1[A](p: Parser[A]): Parser[List[A]] = map2(p, p.many)(_ :: _)
-  def many[A](p: Parser[A]): Parser[List[A]] = map2(p, many(p))(_ :: _) or succeed(List())
+  def many[A](p: Parser[A]): Parser[List[A]] = map2(p, wrap(many(p)))(_ :: _) or succeed(List())
 
   def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]] =
     if (n > 0) map2(p, listOfN(n - 1, p))(_ :: _)
