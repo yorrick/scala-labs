@@ -12,6 +12,7 @@ scalaVersion := "2.10.4"
 
 libraryDependencies ++= Seq(
     "org.scalatest"   %% "scalatest"    % "2.2.4"   % "test",
+    "org.scalacheck" %% "scalacheck" % "1.12.5" % "test",
     "junit" % "junit" % "4.12" % "test",
     "com.novocode" % "junit-interface" % "0.11" % "test",
     "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
