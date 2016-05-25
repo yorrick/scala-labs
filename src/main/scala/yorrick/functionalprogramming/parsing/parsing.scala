@@ -16,6 +16,11 @@ trait Parsers[ParseError, Parser[+_]] { self =>
   def listOfN[A](n: Int, p: Parser[A]): Parser[List[A]]
   def many[A](p: Parser[A]): Parser[List[A]]
   def map[A, B](a: Parser[A])(f: A => B): Parser[B]
+  def slice[A](p: Parser[A]): Parser[String]
+  def product[A, B](p: Parser[A], p2: Parser[B]): Parser[(A, B)]
+
+  def map2[A, B, C](p: Parser[A], p2: Parser[B])(f: (A, B) => C): Parser[C] = product(p, p2).map { case (a, b) => f(a, b)}
+  def many1[A](p: Parser[A]): Parser[List[A]] = map2(p, p.many)(_ :: _)
 
   implicit def string(s: String): Parser[String]
   implicit def operators[A](p: Parser[A]): ParserOps[A] = ParserOps[A](p)
@@ -27,11 +32,13 @@ trait Parsers[ParseError, Parser[+_]] { self =>
   case class ParserOps[A](p: Parser[A]) {
     def |[B >: A](p2: Parser[B]): Parser[B] = self.or(p, p2)
     def or[B >: A](p2: => Parser[B]): Parser[B] = self.or(p, p2)
-    def many(p: Parser[A]): Parser[List[A]] = self.many(p)
+    def many: Parser[List[A]] = self.many(p)
+    def many1: Parser[List[A]] = self.many1(p)
     def map[B](f: A => B): Parser[B] = self.map(p)(f)
+    def slice: Parser[String] = self.slice(p)
+    def **[B](p2: Parser[B]): Parser[(A, B)] = self.product(p, p2)
+    def map2[B, C](p2: Parser[B])(f: (A, B) => C): Parser[C] = self.map2(p, p2)(f)
   }
-
-  val sp: Parser[String] = "abra" | "cadabra"
 
   object Laws {
     def equal[A](p1: Parser[A], p2: Parser[A])(in: Gen[String]): Prop = forAll(in) { s =>
@@ -42,6 +49,19 @@ trait Parsers[ParseError, Parser[+_]] { self =>
 
     def succeedLaw[A](in: Gen[String]): Prop = forAll(in) { s =>
       run(succeed(s))("anything at all") == Right(s)
+    }
+
+    def tests: Unit = {
+      val sp: Parser[String] = "abra" | "cadabra"
+      val ip: Parser[Int] = sp.map(_.length)
+      val spm: Parser[List[String]] = sp.many
+      run(slice(("a" | "b").many))("aaba") == Right("aaba")
+
+      val cp: Parser[Char] = char('t')
+      val cpm: Parser[List[Char]] = char('t').many
+
+      char('a').many.slice.map(_.size)
+
     }
   }
 }
