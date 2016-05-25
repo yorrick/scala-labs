@@ -69,4 +69,14 @@ object Monoid {
   // Then we have to also "flip" the monoid so that it operates from left to right.
   def foldLeft[A, B](as: List[A])(z: B)(f: (B, A) => B): B =
     foldMap(as, dual(endoMonoid[B]))(a => b => f(b, a))(z)
+
+  def foldMapV[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): B =
+    if (v.isEmpty)
+      m.zero
+    else if (v.length == 1)
+      f(v.head)
+    else {
+      val (left, right) = v.splitAt(v.length / 2)
+      m.op(foldMapV(left, m)(f), foldMapV(right, m)(f))
+    }
 }
