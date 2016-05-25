@@ -5,6 +5,7 @@ import Prop._
 
 import scala.language.higherKinds
 import scala.language.implicitConversions
+import scala.util.matching.Regex
 
 trait Parser[A]
 trait ParseError
@@ -17,6 +18,7 @@ trait Parsers[ParseError, Parser[+_]] { self =>
   def slice[A](p: Parser[A]): Parser[String]
   def product[A, B](p: Parser[A], p2: => Parser[B]): Parser[(A, B)]
   def wrap[A](p: => Parser[A]): Parser[A]
+  def flatMap[A, B](p: Parser[A])(f: A => Parser[B]): Parser[B]
 
   def map2[A, B, C](p: Parser[A], p2: => Parser[B])(f: (A, B) => C): Parser[C] = product(p, p2).map(f.tupled)
   def many1[A](p: Parser[A]): Parser[List[A]] = map2(p, p.many)(_ :: _)
@@ -27,6 +29,7 @@ trait Parsers[ParseError, Parser[+_]] { self =>
     else succeed(List())
 
   implicit def string(s: String): Parser[String]
+  implicit def regex(r: Regex): Parser[String]
   implicit def operators[A](p: Parser[A]): ParserOps[A] = ParserOps[A](p)
   implicit def asStringParser[A](a: A)(implicit f: A => Parser[String]): ParserOps[String] = ParserOps(f(a))
 
@@ -39,6 +42,7 @@ trait Parsers[ParseError, Parser[+_]] { self =>
     def many: Parser[List[A]] = self.many(p)
     def many1: Parser[List[A]] = self.many1(p)
     def map[B](f: A => B): Parser[B] = self.map(p)(f)
+    def flatMap[B](f: A => Parser[B]): Parser[B] = self.flatMap(p)(f)
     def slice: Parser[String] = self.slice(p)
     def **[B](p2: Parser[B]): Parser[(A, B)] = self.product(p, p2)
     def map2[B, C](p2: Parser[B])(f: (A, B) => C): Parser[C] = self.map2(p, p2)(f)
@@ -76,6 +80,10 @@ trait Parsers[ParseError, Parser[+_]] { self =>
       char('a').many.slice.map(_.size)
 
       val manyAMany1B: Parser[(Int, Int)] = char('a').many.slice.map(_.size) ** char('b').many1.slice.map(_.size)
+
+
+      val intParser: Parser[Int] = ("[0-9]+".r).map(_.toInt)
+      intParser.flatMap(n => listOfN(n, char('a')))
     }
   }
 }
