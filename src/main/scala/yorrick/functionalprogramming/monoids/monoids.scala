@@ -1,5 +1,7 @@
 package yorrick.functionalprogramming.monoids
 
+import yorrick.functionalprogramming.async.Nonblocking.Par
+
 
 trait Monoid[A] {
   def op(a1: A, a2: A): A  // associative operation
@@ -79,4 +81,13 @@ object Monoid {
       val (left, right) = v.splitAt(v.length / 2)
       m.op(foldMapV(left, m)(f), foldMapV(right, m)(f))
     }
+
+  def par[A](m: Monoid[A]): Monoid[Par[A]] = new Monoid[Par[A]] {
+    def op(a1: Par[A], a2: Par[A]): Par[A] = Par.map2(a1, a2) { case (v1, v2) => m.op(v1, v2)}
+    def zero: Par[A] = Par.unit(m.zero)
+  }
+
+  // we perform the mapping and the reducing both in parallel
+  def parFoldMap[A,B](v: IndexedSeq[A], m: Monoid[B])(f: A => B): Par[B] =
+    Par.flatMap(Par.parMap(v)(f)){ bs => foldMapV(bs, par(m))(b => Par.async(b => ())) }
 }
