@@ -17,7 +17,9 @@ trait Parsers[ParseError, Parser[+_]] { self =>
   def slice[A](p: Parser[A]): Parser[String]
   def wrap[A](p: => Parser[A]): Parser[A]
   def flatMap[A, B](p: Parser[A])(f: A => Parser[B]): Parser[B]
+  def succeed[A](a: A): Parser[A] = string("").map(_ => a)
 
+  def char(c: Char): Parser[Char] = string(c.toString).map(_.charAt(0))
   def many1[A](p: Parser[A]): Parser[List[A]] = map2(p, p.many)(_ :: _)
   def many[A](p: Parser[A]): Parser[List[A]] = map2(p, wrap(many(p)))(_ :: _) or succeed(List())
   def product[A, B](p: Parser[A], p2: => Parser[B]): Parser[(A, B)] = flatMap(p)(a => map(p2)(b => (a, b)))
@@ -32,9 +34,6 @@ trait Parsers[ParseError, Parser[+_]] { self =>
   implicit def regex(r: Regex): Parser[String]
   implicit def operators[A](p: Parser[A]): ParserOps[A] = ParserOps[A](p)
   implicit def asStringParser[A](a: A)(implicit f: A => Parser[String]): ParserOps[String] = ParserOps(f(a))
-
-  def char(c: Char): Parser[Char] = string(c.toString).map(_.charAt(0))
-  def succeed[A](a: A): Parser[A] = string("").map(_ => a)
 
   case class ParserOps[A](p: Parser[A]) {
     def |[B >: A](p2: Parser[B]): Parser[B] = self.or(p, p2)
