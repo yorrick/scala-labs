@@ -19,7 +19,7 @@ trait Parsers[ParseError, Parser[+_]] { self =>
   def slice[A](p: Parser[A]): Parser[String]
   def product[A, B](p: Parser[A], p2: Parser[B]): Parser[(A, B)]
 
-  def map2[A, B, C](p: Parser[A], p2: Parser[B])(f: (A, B) => C): Parser[C] = product(p, p2).map { case (a, b) => f(a, b)}
+  def map2[A, B, C](p: Parser[A], p2: Parser[B])(f: (A, B) => C): Parser[C] = product(p, p2).map(f.tupled)
   def many1[A](p: Parser[A]): Parser[List[A]] = map2(p, p.many)(_ :: _)
 
   implicit def string(s: String): Parser[String]
@@ -49,6 +49,15 @@ trait Parsers[ParseError, Parser[+_]] { self =>
 
     def succeedLaw[A](in: Gen[String]): Prop = forAll(in) { s =>
       run(succeed(s))("anything at all") == Right(s)
+    }
+
+    def unbiasL[A,B,C](p: ((A,B), C)): (A,B,C) = (p._1._1, p._1._2, p._2)
+    def unbiasR[A,B,C](p: (A, (B,C))): (A,B,C) = (p._1, p._2._1, p._2._2)
+
+    def productLaw[A, B, C](a: Parser[A], b: Parser[B], c: Parser[C])(in: Gen[String]): Prop = forAll(in) { s =>
+      // associativity
+      run((a ** b) ** c map (unbiasL))(s) == run(a ** (b ** c) map (unbiasR))(s)
+      // a.map(f) ** b.map(g) == (a ** b) map { case (a,b) => (f(a), g(b)) }
     }
 
     def tests: Unit = {
