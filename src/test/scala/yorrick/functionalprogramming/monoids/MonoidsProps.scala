@@ -37,6 +37,9 @@ class MonoidsProps extends PropSpec with PropertyChecks with Matchers {
   monoidLaws(firstOptionMonoid[Int], "firstOptionMonoid", Gen.option(Gen.choose(-10, 10)))
   monoidLaws(lastOptionMonoid[Int], "lastOptionMonoid", Gen.option(Gen.choose(-10, 10)))
 
-  // function equality does not work
-//  monoidLaws(endoMonoid[Int], "endoMonoid", offsetGen)
+  property("list fold with monoid") {
+    forAll(Gen.listOf(Gen.alphaStr)) { stringList =>
+      stringList.foldRight(stringMonoid.zero)(stringMonoid.op) shouldBe stringList.foldRight(stringMonoid.zero)(stringMonoid.op)
+    }
+  }
 }
