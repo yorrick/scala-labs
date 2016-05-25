@@ -187,8 +187,7 @@ case class Location(input: String, offset: Int = 0) {
     case lineStart => offset - lineStart
   }
 
-  def toError(msg: String): ParseError =
-    ParseError(List((this, msg)))
+  def toError(msg: String): ParseError = ParseError(List((this, msg)))
 
   def advanceBy(n: Int) = copy(offset = offset+n)
 
