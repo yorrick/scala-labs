@@ -1,7 +1,10 @@
 package yorrick.algorithms1
 
 /**
- * O(N + M * log(N)) algo
+ * Find: O(log(size))
+ * Union: O(log(size))
+ *
+ * Balances tree to avoid having trees that are too big, and compresses path
  */
 class WeightedCompressedTreeUnionFindScala(override val size: Int) extends WeightedTreeUnionFindScala(size) {
   

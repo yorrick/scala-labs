@@ -2,11 +2,12 @@ package yorrick.algorithms1
 
 
 /**
- * O(N*M) algo
+ * Find: O(1)
+ * Union: O(N) problematic because union can be called many times
  */
-class SimpleUnionFindScala(override val size: Int) extends UnionFind {
+case class SimpleUnionFindScala(size: Int) extends UnionFind {
   def find(p: Int, q: Int): Boolean = ids(p) == ids(q)
-  
+
   def union(p: Int, q: Int): Unit = {
     val pid = ids(p)
     val qid = ids(q)
