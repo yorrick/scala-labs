@@ -18,7 +18,9 @@ libraryDependencies ++= Seq(
     "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
     "com.gensler" %% "scalavro" % "0.6.2",
     "org.scaldi" %% "scaldi" % "0.3.2",
-    "net.codingwell" %% "scala-guice" % "4.0.1"
+    "net.codingwell" %% "scala-guice" % "4.0.1",
+    "com.softwaremill.macwire" %% "macros" % "1.0.7",
+    "com.softwaremill.macwire" %% "runtime" % "1.0.7"
 )
 
 scalacOptions ++= List("-feature","-deprecation", "-unchecked", "-Xlint")
