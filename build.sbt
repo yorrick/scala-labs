@@ -17,6 +17,7 @@ libraryDependencies ++= Seq(
     "com.novocode" % "junit-interface" % "0.11" % "test",
     "org.scalamock" %% "scalamock-scalatest-support" % "3.2.2" % "test",
 //    "com.gensler" %% "scalavro" % "0.6.2",
+    "com.typesafe" % "config" % "1.2.1",
     "org.scaldi" %% "scaldi" % "0.5.7",
     "net.codingwell" %% "scala-guice" % "4.0.1",
     "com.softwaremill.macwire" %% "macros" % "1.0.7",
