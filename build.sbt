@@ -2,7 +2,7 @@
 
 //sbtavrohugger.SbtAvrohugger.specificAvroSettings
 
-name := "algorithms1"
+name := "scala-labs"
 
 organization := "yorrick"
 
@@ -21,7 +21,8 @@ libraryDependencies ++= Seq(
     "org.scaldi" %% "scaldi" % "0.5.7",
     "net.codingwell" %% "scala-guice" % "4.0.1",
     "com.softwaremill.macwire" %% "macros" % "1.0.7",
-    "com.softwaremill.macwire" %% "runtime" % "1.0.7"
+    "com.softwaremill.macwire" %% "runtime" % "1.0.7",
+    "org.antlr" % "antlr-runtime" % "3.4"
 )
 
 scalacOptions ++= List("-feature","-deprecation", "-unchecked", "-Xlint")
