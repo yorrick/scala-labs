@@ -7,17 +7,23 @@ import collection.JavaConverters._
 import Implicits._
 
 
-object YarnParser {
-  /** Returns shortest possible list of lists xss such that
-    *   - xss.flatten == xs
-    *   - No sublist in xss contains an element matching p in its tail
-    */
-  def groupPrefix[T](xs: List[T])(p: T => Boolean): List[List[T]] = xs match {
-    case List() => List()
-    case x :: xs1 =>
-      val (ys, zs) = xs1 span (!p(_))
-      (x :: ys) :: groupPrefix(zs)(p)
+object CollectionImplicits {
+  implicit class RichList[T](xs: List[T]) {
+    /** Returns shortest possible list of lists xss such that
+      *   - xss.flatten == xs
+      *   - No sublist in xss contains an element matching p in its tail
+      */
+    def groupPrefix(p: T => Boolean): List[List[T]] = xs match {
+      case List() => List()
+      case x :: xs1 =>
+        val (ys, zs) = xs1 span (!p(_))
+        (x :: ys) :: zs.groupPrefix(p)
+    }
   }
+}
+
+
+object YarnParser {
 
   def grep(regexes: String*): String => Boolean = line => regexes.exists(regex => line.matches(regex))
 
