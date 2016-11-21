@@ -5,6 +5,7 @@ import com.jmolly.stacktraceparser.{NStackTrace, StackTraceParser}
 import scala.util.Try
 import collection.JavaConverters._
 import Implicits._
+import CollectionImplicits._
 
 
 object CollectionImplicits {
@@ -24,19 +25,31 @@ object CollectionImplicits {
 
 
 object YarnParser {
+  def splitInstanceLogs(instanceLogs: List[String]): Map[String, List[String]] = instanceLogs
+    .groupPrefix(grep(containerSeparator))
+    // drop first and last groups that are binary header and footers
+    .drop(1).dropRight(1)
+    .map { fullContainerLogs =>
+      val containerHeader = fullContainerLogs.head
+      val containerLogs = fullContainerLogs.tail
 
-  def grep(regexes: String*): String => Boolean = line => regexes.exists(regex => line.matches(regex))
+      extractContainerId(containerHeader) -> containerLogs
+    }.toMap
 
-  val container = """container_\d{13}_\d{4}_\d{2}_\d{6}"""
-  val containerSeparator = s"$container.*".i
-  val ContainerRegex = s""".*($container).*""".r
+  private def grep(regexes: String*): String => Boolean = line => regexes.exists(regex => line.matches(regex))
+  private val container = """container_\d{13}_\d{4}_\d{2}_\d{6}"""
+  private val containerSeparator = s"$container.*".i
+  private val ContainerRegex = s""".*($container).*""".r
 
-  val timestamp = """\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}"""
-  val logEventSeparator = s"""^${timestamp} .*"""
+  private val timestamp = """\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}"""
+  private val logEventSeparator = s"""^${timestamp} .*"""
 
   val df = new SimpleDateFormat("yy/MM/dd hh:mm:ss")
-  val EventRegex = s"""^(${timestamp}) ([A-Z]+) (.*)""".r
+  private val EventRegex = s"""^(${timestamp}) ([A-Z]+) (.*)""".r
 
+  private def extractContainerId(containerHeader: String): String = containerHeader match {
+    case ContainerRegex(containerId) => containerId
+  }
 
   def toEvent(eventLines: List[String]): Try[Event] = Try {
     eventLines match {
@@ -54,9 +67,4 @@ object YarnParser {
     Error(st.getTrace.getException.getClassName, st.getTrace.getException.getMessage)
   }
 
-  def extractContainerId(containerHeaderLines: List[String]): String = {
-    containerHeaderLines match {
-      case ContainerRegex(containerId) :: _ => containerId
-    }
-  }
 }
