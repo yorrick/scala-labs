@@ -22,7 +22,11 @@ libraryDependencies ++= Seq(
     "net.codingwell" %% "scala-guice" % "4.0.1",
     "com.softwaremill.macwire" %% "macros" % "1.0.7",
     "com.softwaremill.macwire" %% "runtime" % "1.0.7",
-    "org.antlr" % "antlr-runtime" % "3.4"
+    "org.antlr" % "antlr-runtime" % "3.4",
+    "org.scalaz" %% "scalaz-core" % "7.2.7",
+    "org.scalaz" %% "scalaz-effect" % "7.2.7"
+//    "org.scalaz" %% "scalaz-typelevel" % "7.2.7",
+//    "org.scalaz" %% "scalaz-scalacheck-binding" % "7.2.7" % "test"
 )
 
 scalacOptions ++= List("-feature","-deprecation", "-unchecked", "-Xlint")
