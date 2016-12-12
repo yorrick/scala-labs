@@ -10,6 +10,8 @@ version := "1.0"
 
 scalaVersion := "2.11.8"
 
+val scalazVersion = "7.2.8"
+
 libraryDependencies ++= Seq(
     "org.scalatest"   %% "scalatest"    % "2.2.4"   % "test",
     "org.scalacheck" %% "scalacheck" % "1.12.5" % "test",
@@ -23,9 +25,14 @@ libraryDependencies ++= Seq(
     "com.softwaremill.macwire" %% "macros" % "1.0.7",
     "com.softwaremill.macwire" %% "runtime" % "1.0.7",
     "org.antlr" % "antlr-runtime" % "3.4",
-    "org.scalaz" %% "scalaz-core" % "7.2.8"
+    "org.scalaz" %% "scalaz-core" % scalazVersion,
+    "org.scalaz" %% "scalaz-effect" % scalazVersion,
+//    "org.scalaz" %% "scalaz-typelevel" % scalazVersion,
+    "org.scalaz" %% "scalaz-scalacheck-binding" % scalazVersion % "test"
 )
 
 scalacOptions ++= List("-feature","-deprecation", "-unchecked", "-Xlint")
 
 testOptions in Test += Tests.Argument("-oDF")
+
+initialCommands in console := "import scalaz._, Scalaz._"
