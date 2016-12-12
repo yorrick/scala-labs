@@ -22,7 +22,8 @@ libraryDependencies ++= Seq(
     "net.codingwell" %% "scala-guice" % "4.0.1",
     "com.softwaremill.macwire" %% "macros" % "1.0.7",
     "com.softwaremill.macwire" %% "runtime" % "1.0.7",
-    "org.antlr" % "antlr-runtime" % "3.4"
+    "org.antlr" % "antlr-runtime" % "3.4",
+    "org.scalaz" %% "scalaz-core" % "7.2.8"
 )
 
 scalacOptions ++= List("-feature","-deprecation", "-unchecked", "-Xlint")

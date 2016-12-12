@@ -20,9 +20,13 @@ object MonoidOp {
 object TestMonoidOp {
   def main (args: Array[String] ) {
     import MonoidOp._
-    
+
     // int and string monoids come from Monoid type class
     println(3 |+| 4)
     println("fvkp" |+| "kfl")
+
+    import scalaz.syntax.std.all._
+    println(1.some | 2)
+    println((1 > 10) ? 1 | 2)
   }
 }

@@ -1,6 +1,7 @@
 package yorrick.learningscalaz
 
 import scala.language.implicitConversions
+import Plus._
 
 trait Plus[A] {
   def plus(a1: A, a2: A): A
@@ -17,6 +18,6 @@ object PlusTest {
       def plus(i1: Int, i2: Int): Int = i1 + i2
     } 
     
-    println(Plus.plus(1, 2))
+    println(plus(1, 2))
   }
 }

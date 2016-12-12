@@ -2,6 +2,7 @@ package yorrick.learningscalaz
 
 import scala.language.higherKinds
 
+
 // FoldLeft type class
 trait FoldLeft[F[_]] {
   def foldLeft[A, B](xs: F[A], b: B, f: (B, A) => B): B
@@ -21,6 +22,7 @@ object Test {
   }
 
   def main(args: Array[String]) {
-    println(sum(List(3, 4)))
+    println(sum(List(1, 2, 3, 4)))
+    println(sum(List("a", "b", "c")))
   }
 }

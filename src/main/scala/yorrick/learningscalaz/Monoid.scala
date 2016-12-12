@@ -18,6 +18,13 @@ object Monoid {
     def mzero: String = ""
   }
 }
+
+object ExtraMonoids {
+  implicit val MultiMonoid: Monoid[Int] = new Monoid[Int] {
+    def mappend(a1: Int, a2: Int) = a1 * a2
+    def mzero = 1
+  }
+}
   
 object TestMonoid {
   def sum[A: Monoid](xs: List[A]): A = {
@@ -28,5 +35,8 @@ object TestMonoid {
   def main(args: Array[String]) {
     println(sum(List(1, 3)))
     println(sum(List("toto", "titi")))
+
+    import ExtraMonoids._
+    println(sum(List(1, 3)))
   }
 }
