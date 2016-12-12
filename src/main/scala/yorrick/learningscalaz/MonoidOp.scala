@@ -25,7 +25,7 @@ object TestMonoidOp {
     println(3 |+| 4)
     println("fvkp" |+| "kfl")
 
-    import scalaz.syntax.std.all._
+    import scalaz.Scalaz._
     println(1.some | 2)
     println((1 > 10) ? 1 | 2)
   }
