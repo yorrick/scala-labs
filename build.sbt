@@ -32,6 +32,7 @@ lazy val main = Project(
         scalacOptions ++= List("-feature","-deprecation", "-unchecked", "-Xlint"),
         testOptions in Test += Tests.Argument("-oDF"),
         initialCommands in console := "import scalaz._, Scalaz._",
+        initialCommands in console in Test := "import scalaz._, Scalaz._, scalacheck.ScalazProperties._, scalacheck.ScalazArbitrary._,scalacheck.ScalaCheckBinding._",
         addCompilerPlugin("org.scalamacros" % "paradise" % paradiseVersion cross CrossVersion.full)
     )
 ) dependsOn (

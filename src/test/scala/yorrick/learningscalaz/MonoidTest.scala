@@ -3,7 +3,7 @@ package yorrick.learningscalaz
 import org.scalatest.{FlatSpec, Matchers, OptionValues, TryValues}
 import scalaz._
 import Scalaz._
-
+import Order.order
 import scalaz.{Monoid => SZMonoid}
 
 
@@ -35,5 +35,14 @@ class MonoidTest extends FlatSpec with Matchers with OptionValues with TryValues
     personCompare(Person(12, "tota"), Person(12, "toto")) shouldBe Ordering.LT
     personCompare(Person(12, "toto"), Person(12, "toto")) shouldBe Ordering.EQ
     personCompare(Person(12, "toto", 2), Person(12, "toto")) shouldBe Ordering.GT
+
+    // define Order[Person]
+    implicit val personOrder: Order[Person] = order(personCompare)
+
+    Person(13, "toto") ?|? Person(12, "toto") shouldBe Ordering.GT
+
+    // define scala ordering to be able to use sorted
+    implicit val personOrdering = personOrder.toScalaOrdering
+    Seq(Person(13, "toto"), Person(12, "toto")).sorted shouldBe Seq(Person(12, "toto"), Person(13, "toto"))
   }
 }
