@@ -5,7 +5,7 @@ import scala.language.experimental.macros
 import scala.reflect.macros.blackbox.Context
 
 class Benchmark extends StaticAnnotation {
-  def macroTransform(annottees: Any*) = macro Benchmark.impl
+  def macroTransform(annottees: Any*): Any = macro Benchmark.impl
 }
 
 object Benchmark {

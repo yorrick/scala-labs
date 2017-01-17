@@ -1,6 +1,7 @@
 package yorrick.learningscalaz
 
 import scalaz.syntax.Ops
+import scala.language.higherKinds
 
 
 // Type class for types that support 'map'

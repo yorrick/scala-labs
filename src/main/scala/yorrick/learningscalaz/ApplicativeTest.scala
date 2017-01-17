@@ -3,6 +3,8 @@ package yorrick.learningscalaz
 import scalaz.Applicative
 import scalaz.Scalaz._
 
+import scala.language.higherKinds
+
 
 object ApplicativeTest {
   def main(args: Array[String]): Unit = {
