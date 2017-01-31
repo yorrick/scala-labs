@@ -3,7 +3,6 @@ package yorrick.macros.to_string
 
 import scala.annotation.StaticAnnotation
 import scala.language.experimental.macros
-import scala.reflect.api.Trees
 import scala.reflect.macros.whitebox.Context
 
 
@@ -18,6 +17,7 @@ object BuilderFunctions {
 
     val classDef: ClassDef = {
       annottees.map(_.tree).toList match {
+        // use http://docs.scala-lang.org/overviews/quasiquotes/intro.html to be more concise
         // this matches only case classes
         case q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends ..$parents { $self => ..$stats }" :: Nil => {
           val valDefs: List[ValDef] = paramss.flatten
@@ -28,39 +28,34 @@ object BuilderFunctions {
             q"def $name[T](t: T)(implicit to: T => $tpt): $tpname = this.copy($name = to(t))"
           }
 
-//          val fieldNames = valDefs.map(_.name.decodedName.toString)
-//          val emptyString = ""
-//
-//          val dataToStringTree: Tree = fieldNames
-//            .map(fn => Ident(TermName(fn)))
-//            .map(identifier => q"$identifier")
-//            .foldLeft(q"$emptyString")((t1, t2) => q"$t1.toString + $t2.toString")
+          // TODO use basic API here, once we find out how to define $ctorMods(...$paramss) using ClassDef
+          val basicClassDef: ClassDef =
+            q"""$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends ..$parents{
+              $self => ..$stats
+            }"""
 
-          // use http://docs.scala-lang.org/overviews/quasiquotes/intro.html to be more concise
-          // TODO use basic API here!!
-          val basicClassDef: ClassDef = q"""$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends ..$parents{
-          }"""
+//          val classImplementation = Template(parents, self, stats ++ builderFunctions)
+//          val basicClassDef: ClassDef = ClassDef(mods, tpname, tparams, classImplementation)
 
-//          println(basicClassDef)
-
-          // use basic API
-          basicClassDef match {
+          def appendMethods(cd: ClassDef, methods: Seq[Tree]): ClassDef = cd match {
             case ClassDef(mods, name, something, template) =>
               val q = template match {
                 case Template(superMaybe, emptyValDef, defs) =>
-                  Template(superMaybe, emptyValDef, defs ++ stats ++ builderFunctions)
+                  Template(superMaybe, emptyValDef, defs ++ builderFunctions)
                 case y =>
                   y
               }
+
               ClassDef(mods, name, something, q)
           }
+
+          // use basic API
+          appendMethods(basicClassDef, builderFunctions)
         }
         case _ => c.abort(c.enclosingPosition, "Annotation @DataToString can be used only with case classes")
       }
     }
 
-    val result: Expr[Any] = c.Expr[Any](classDef)
-
-    result
+    c.Expr[Any](classDef)
   }
 }
